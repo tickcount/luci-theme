@@ -5,7 +5,7 @@
 
 include $(TOPDIR)/rules.mk
 
-LUCI_TITLE:=Aurora Theme (A modern browser theme built with Vite and Tailwind CSS)
+LUCI_TITLE:=Outline Theme (A modern browser theme built with Vite and Tailwind CSS)
 LUCI_DEPENDS:=+luci-base
 
 PKG_VERSION:=0.11.0

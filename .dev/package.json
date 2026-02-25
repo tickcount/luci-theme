@@ -1,5 +1,5 @@
 {
-	"name": "luci-theme-aurora",
+	"name": "luci-theme-outline",
 	"description": "Modern OpenWrt LuCI theme built with Vite and TailwindCSS",
 	"type": "module",
 	"scripts": {
@@ -17,5 +17,5 @@
 		"terser": "^5.43.1",
 		"vite": "^7.1.1"
 	},
-	"packageManager": "pnpm@10.29.1+sha512.48dae233635a645768a3028d19545cacc1688639eeb1f3734e42d6d6b971afbf22aa1ac9af52a173d9c3a20c15857cfa400f19994d79a2f626fcc73fccda9bbc"
+	"packageManager": "pnpm@10.30.2+sha512.36cdc707e7b7940a988c9c1ecf88d084f8514b5c3f085f53a2e244c2921d3b2545bc20dd4ebe1fc245feec463bb298aecea7a63ed1f7680b877dc6379d8d0cb4"
 }

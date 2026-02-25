@@ -1,0 +1,168 @@
+{#
+ luci-theme-outline:
+ Copyright 2025 eamonxg <eamonxiong@gmail.com>
+ This theme is derived from luci-theme-bootstrap UT template.
+ luci-theme-bootstrap:
+ Copyright 2022 Jo-Philipp Wich <jo@mein.io>
+ Licensed to the public under the Apache License 2.0.
+-#}
+
+{%const boardinfo = ubus.call('system', 'board');-%}
+{% include('header', { blank_page: true }) %}
+
+<div class="login-screen" {% if (fuser): %}data-error="true"{% endif %}>
+	<canvas class="login-canvas"></canvas>
+	<div class="login-gradient-bottom"></div>
+	<div class="login-gradient-radial"></div>
+	<div class="login-gradient-top"></div>
+	<div class="login-shell">
+		<form method="post" class="login-card">
+			<h1 class="login-hostname">{{ striptags(boardinfo?.hostname ?? '?') }}</h1>
+
+			<div class="login-divider" aria-hidden="true">
+				<span class="login-divider-line"></span>
+				<span class="login-divider-text">{{ _('Authorization Required') }}</span>
+				<span class="login-divider-line"></span>
+			</div>
+
+			{% if (fuser): %}
+			<div class="alert-message error" role="alert">{{ _('Invalid username and/or password! Please try again.') }}</div>
+			{% endif %}
+
+			<div class="login-fields">
+				<input name="luci_username" id="luci_username" type="text" class="login-input" value="{{ entityencode(duser ?? '', true) }}" autocomplete="username" placeholder="{{ _('Login') }}">
+
+				<div class="login-password-wrap">
+					<input name="luci_password" id="luci_password" type="password" class="login-input" autocomplete="current-password" placeholder="{{ _('Password') }}">
+					<button type="submit" class="login-submit" aria-label="{{ _('Log in') }}">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+					</button>
+				</div>
+			</div>
+
+			<p class="login-footer">
+				Powered by <a href="https://openwrt.org" target="_blank" rel="noopener">OpenWrt</a>
+			</p>
+		</form>
+	</div>
+</div>
+
+<script>
+document.getElementById('luci_username').value ? document.getElementById('luci_password').focus() : document.getElementById('luci_username').focus();
+
+(function() {
+	var c = document.querySelector('.login-canvas');
+	if (!c) return;
+	var gl = c.getContext('webgl2', { alpha: true, premultipliedAlpha: true });
+	if (!gl) return;
+
+	var vsSource = [
+		'#version 300 es',
+		'precision mediump float;',
+		'in vec2 a_pos;',
+		'uniform vec2 u_resolution;',
+		'out vec2 fragCoord;',
+		'void main() {',
+		'  gl_Position = vec4(a_pos, 0.0, 1.0);',
+		'  fragCoord = (a_pos + 1.0) * 0.5 * u_resolution;',
+		'  fragCoord.y = u_resolution.y - fragCoord.y;',
+		'}'
+	].join('\n');
+
+	var fsSource = [
+		'#version 300 es',
+		'precision mediump float;',
+		'in vec2 fragCoord;',
+		'uniform float u_time;',
+		'uniform float u_opacities[10];',
+		'uniform vec3 u_colors[6];',
+		'uniform float u_total_size;',
+		'uniform float u_dot_size;',
+		'uniform vec2 u_resolution;',
+		'out vec4 fragColor;',
+		'float PHI = 1.61803398874989484820459;',
+		'float random(vec2 xy) {',
+		'  return fract(tan(distance(xy * PHI, xy) * 0.5) * xy.x);',
+		'}',
+		'void main() {',
+		'  vec2 st = fragCoord.xy;',
+		'  st.x -= abs(floor((mod(u_resolution.x, u_total_size) - u_dot_size) * 0.5));',
+		'  st.y -= abs(floor((mod(u_resolution.y, u_total_size) - u_dot_size) * 0.5));',
+		'  float opacity = step(0.0, st.x) * step(0.0, st.y);',
+		'  vec2 st2 = vec2(int(st.x / u_total_size), int(st.y / u_total_size));',
+		'  float frequency = 5.0;',
+		'  float show_offset = random(st2);',
+		'  float rand = random(st2 * floor((u_time / frequency) + show_offset + frequency));',
+		'  opacity *= u_opacities[int(rand * 10.0)];',
+		'  opacity *= 1.0 - step(u_dot_size / u_total_size, fract(st.x / u_total_size));',
+		'  opacity *= 1.0 - step(u_dot_size / u_total_size, fract(st.y / u_total_size));',
+		'  vec3 color = u_colors[int(show_offset * 6.0)];',
+		'  float speed = 0.5;',
+		'  vec2 cg = u_resolution / 2.0 / u_total_size;',
+		'  float d = distance(cg, st2);',
+		'  float t_off = d * 0.01 + (random(st2) * 0.15);',
+		'  opacity *= step(t_off, u_time * speed);',
+		'  opacity *= clamp((1.0 - step(t_off + 0.1, u_time * speed)) * 1.25, 1.0, 1.25);',
+		'  fragColor = vec4(color * opacity, opacity);',
+		'}'
+	].join('\n');
+
+	function mkShader(type, src) {
+		var s = gl.createShader(type);
+		gl.shaderSource(s, src);
+		gl.compileShader(s);
+		return s;
+	}
+
+	var pg = gl.createProgram();
+	gl.attachShader(pg, mkShader(gl.VERTEX_SHADER, vsSource));
+	gl.attachShader(pg, mkShader(gl.FRAGMENT_SHADER, fsSource));
+	gl.linkProgram(pg);
+	gl.useProgram(pg);
+
+	var buf = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+	var pl = gl.getAttribLocation(pg, 'a_pos');
+	gl.enableVertexAttribArray(pl);
+	gl.vertexAttribPointer(pl, 2, gl.FLOAT, false, 0, 0);
+
+	var tLoc = gl.getUniformLocation(pg, 'u_time');
+	var rLoc = gl.getUniformLocation(pg, 'u_resolution');
+	var hasError = c.closest('.login-screen').hasAttribute('data-error');
+	var isDark = document.documentElement.getAttribute('data-darkmode') === 'true';
+
+	gl.uniform1fv(gl.getUniformLocation(pg, 'u_opacities'),
+		[0.3, 0.3, 0.3, 0.5, 0.5, 0.5, 0.8, 0.8, 0.8, 1.0]);
+	gl.uniform3fv(gl.getUniformLocation(pg, 'u_colors'),
+		hasError
+			? [1,0.2,0.2, 1,0.3,0.25, 1,0.15,0.15, 0.9,0.2,0.2, 1,0.25,0.2, 0.95,0.1,0.1]
+			: isDark
+				? [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1]
+				: [0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+	gl.uniform1f(gl.getUniformLocation(pg, 'u_total_size'), 20.0);
+	gl.uniform1f(gl.getUniformLocation(pg, 'u_dot_size'), 6.0);
+
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, isDark ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
+
+	function resize() {
+		c.width = c.clientWidth * 2;
+		c.height = c.clientHeight * 2;
+		gl.viewport(0, 0, c.width, c.height);
+		gl.uniform2f(rLoc, c.width, c.height);
+	}
+	resize();
+	window.addEventListener('resize', resize);
+
+	var t0 = performance.now();
+	(function frame() {
+		gl.uniform1f(tLoc, (performance.now() - t0) / 1000);
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		requestAnimationFrame(frame);
+	})();
+})();
+</script>
+
+{% include('footer', { blank_page: true }) %}

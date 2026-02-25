@@ -1,5 +1,5 @@
 name: "Bug report"
-description: Report an issue for luci-theme-aurora
+description: Report an issue for luci-theme-outline
 title: "[bug]: "
 labels: ["bug"]
 body:
@@ -39,7 +39,7 @@ body:
     id: theme-version
     attributes:
       label: Theme version
-      description: luci-theme-aurora 的版本号或commit 哈希
+      description: luci-theme-outline 的版本号或commit 哈希
       placeholder: ex. 0.5.9_beta or commit SHA(e.g. 56db83c)
     validations:
       required: false

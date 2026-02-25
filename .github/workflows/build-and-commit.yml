@@ -75,7 +75,7 @@ jobs:
           git diff --name-status htdocs/ | sed 's/^/  - /' >> /tmp/build-report.txt
           echo "" >> /tmp/build-report.txt
           echo "Build Size:" >> /tmp/build-report.txt
-          ls -lh htdocs/luci-static/aurora/main.css htdocs/luci-static/resources/view/aurora/sysauth.js htdocs/luci-static/resources/menu-aurora.js 2>/dev/null | awk '{size=$5; if(size ~ /^[0-9]+$/ && size < 1024) size=size"B"; printf "  - %-53s %s\n", $9, size}' >> /tmp/build-report.txt
+          ls -lh htdocs/luci-static/outline/main.css htdocs/luci-static/resources/view/outline/sysauth.js htdocs/luci-static/resources/menu-outline.js 2>/dev/null | awk '{size=$5; if(size ~ /^[0-9]+$/ && size < 1024) size=size"B"; printf "  - %-53s %s\n", $9, size}' >> /tmp/build-report.txt
           cat /tmp/build-report.txt
 
       - name: Commit and push build outputs

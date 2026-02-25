@@ -93,16 +93,16 @@ function createLocalServePlugin(): Plugin {
   const resourceConfig: ResourceConfig = {
     css: {
       routes: {
-        "/luci-static/aurora/main.css": "/src/media/main.css",
+        "/luci-static/outline/main.css": "/src/media/main.css",
       },
       shouldRewrite: true,
       hmrMessage: "CSS file changed",
     },
     js: {
       routes: {
-        "/luci-static/resources/view/aurora/sysauth.js":
-          "src/resource/view/aurora/sysauth.js",
-        "/luci-static/resources/menu-aurora.js": "src/resource/menu-aurora.js",
+        "/luci-static/resources/view/outline/sysauth.js":
+          "src/resource/view/outline/sysauth.js",
+        "/luci-static/resources/menu-outline.js": "src/resource/menu-outline.js",
       },
       shouldRewrite: false,
       hmrMessage: "JS file changed",
@@ -133,6 +133,39 @@ function createLocalServePlugin(): Plugin {
         if (!req.url) return next();
 
         const [pathname, search] = req.url.split("?");
+
+        // Serve static assets (fonts, images) from public directory
+        if (pathname.startsWith("/luci-static/outline/")) {
+          const subPath = pathname.replace("/luci-static/outline/", "");
+          const ext = subPath.split(".").pop()?.toLowerCase() || "";
+          const mimeTypes: Record<string, string> = {
+            otf: "font/otf",
+            woff2: "font/woff2",
+            woff: "font/woff",
+            ttf: "font/ttf",
+            svg: "image/svg+xml",
+            png: "image/png",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            webp: "image/webp",
+            ico: "image/x-icon",
+            gif: "image/gif",
+          };
+
+          if (mimeTypes[ext]) {
+            try {
+              const filePath = resolve(CURRENT_DIR, "public/outline", subPath);
+              const data = await readFile(filePath);
+              res.setHeader("Content-Type", mimeTypes[ext]);
+              res.setHeader("Cache-Control", "no-store");
+              res.statusCode = 200;
+              res.end(data);
+              return;
+            } catch {
+              // Fall through to proxy
+            }
+          }
+        }
 
         const cssTarget = resourceConfig.css.routes[pathname];
         if (cssTarget) {
@@ -213,36 +246,6 @@ export default defineConfig(({ mode }) => {
       target: OPENWRT_HOST,
       changeOrigin: true,
       secure: false,
-      configure: (proxy: any) => {
-        proxy.on("proxyRes", (proxyRes: any, req: any, res: any) => {
-          const contentType = proxyRes.headers["content-type"] || "";
-
-          if (contentType.includes("text/html")) {
-            const chunks: Buffer[] = [];
-
-            proxyRes.on("data", (chunk: Buffer) => {
-              chunks.push(chunk);
-            });
-
-            proxyRes.on("end", () => {
-              let html = Buffer.concat(chunks).toString("utf-8");
-
-              const viteClient = `<script type="module" src="/@vite/client"></script>`;
-              if (html.includes("</head>") && !html.includes("/@vite/client")) {
-                html = html.replace("</head>", `${viteClient}\n\t</head>`);
-                console.log("[HMR] Injected Vite client into proxied HTML");
-              }
-
-              res.removeAllListeners("end");
-
-              res.setHeader("Content-Length", Buffer.byteLength(html));
-              res.end(html);
-            });
-
-            proxyRes.pipe = () => proxyRes;
-          }
-        });
-      },
     },
   } as const;
 
@@ -287,7 +290,7 @@ export default defineConfig(({ mode }) => {
           main: resolve(CURRENT_DIR, "src/media/main.css"),
         },
         output: {
-          assetFileNames: "aurora/[name].[ext]",
+          assetFileNames: "outline/[name].[ext]",
         },
       },
     },

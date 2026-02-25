@@ -65,12 +65,12 @@ jobs:
 
       - name: Check build output
         run: |
-          if [ ! -f "../htdocs/luci-static/aurora/main.css" ]; then
+          if [ ! -f "../htdocs/luci-static/outline/main.css" ]; then
             echo "❌ Build failed: main.css not found"
             exit 1
           fi
-          if [ ! -f "../htdocs/luci-static/resources/menu-aurora.js" ]; then
-            echo "❌ Build failed: menu-aurora.js not found"
+          if [ ! -f "../htdocs/luci-static/resources/menu-outline.js" ]; then
+            echo "❌ Build failed: menu-outline.js not found"
             exit 1
           fi
           echo "✅ Build output verified"

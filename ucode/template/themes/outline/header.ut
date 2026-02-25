@@ -1,0 +1,247 @@
+{%
+	import { getuid, getspnam } from 'luci.core';
+	import { cursor } from 'uci';
+
+	const boardinfo = ubus.call('system', 'board');
+	const uci = cursor();
+	const tokens = uci.get_all('outline', 'theme') || {};
+	const icon_cache_version = tokens.icon_cache_version || '0';
+	const logo_png = tokens.logo_png || 'logo.png';
+
+	http.prepare_content('text/html; charset=UTF-8');
+-%}
+
+<!DOCTYPE html>
+<html lang="{{ dispatcher.lang }}">
+	<head>
+		<meta charset="utf-8">
+		<title>{{ striptags(`${dispatched?.title ?  `${_(dispatched.title)} - ` : ''}${boardinfo.hostname ?? '?'}`) }}</title>
+		<script>
+			const setTheme = (theme) => {
+				const current = ['light', 'dark', 'device'].includes(theme) ? theme : 'device';
+				const isDark = current === 'dark' || (current === 'device' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+				document.documentElement.classList.add('theme-transition');
+				document.documentElement.setAttribute('data-darkmode', isDark);
+				localStorage.setItem('outline.theme', current);
+				setTimeout(() => document.documentElement.classList.remove('theme-transition'), 500);
+			};
+
+			const syncToggle = () => {
+				const isDark = document.documentElement.getAttribute('data-darkmode') === 'true';
+				document.querySelectorAll('.theme-toggle').forEach(btn => {
+					btn.classList.toggle('is-dark', isDark);
+				});
+
+				const current = localStorage.getItem('outline.theme') || 'device';
+				document.querySelectorAll('.theme-switcher .theme-option').forEach(opt => {
+					const active = opt.dataset.theme === current;
+					opt.classList.toggle('active', active);
+					opt.querySelector('input[type="radio"]')?.setAttribute('checked', active);
+				});
+
+				const mobileToggle = document.getElementById('mobile-theme-toggle');
+				if (mobileToggle) {
+					const activeTheme = isDark ? (current === 'device' ? 'device-dark' : 'dark') : (current === 'device' ? 'device-light' : 'light');
+					mobileToggle.setAttribute('data-active-theme', activeTheme);
+				}
+			};
+
+			setTheme(localStorage.getItem('outline.theme'));
+
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+				const theme = localStorage.getItem('outline.theme') || 'device';
+				if (theme === 'device') setTheme('device'), syncToggle();
+			});
+
+			document.addEventListener('DOMContentLoaded', () => {
+				syncToggle();
+
+				document.querySelectorAll('.theme-toggle').forEach(btn => {
+					btn.addEventListener('click', () => {
+						const isDark = document.documentElement.getAttribute('data-darkmode') === 'true';
+						setTheme(isDark ? 'light' : 'dark');
+						syncToggle();
+					});
+				});
+
+				document.querySelectorAll('.theme-switcher .theme-option').forEach(opt => {
+					opt.addEventListener('click', () => (setTheme(opt.dataset.theme), syncToggle()));
+				});
+
+				const mobileToggle = document.getElementById('mobile-theme-toggle');
+				if (mobileToggle) {
+					mobileToggle.addEventListener('click', () => {
+						const isDark = document.documentElement.getAttribute('data-darkmode') === 'true';
+						setTheme(isDark ? 'light' : 'dark');
+						syncToggle();
+					});
+				}
+
+				const updateNavbarOpacity = () => {
+					const overlay = document.getElementById('header-blur-overlay');
+					if (overlay) {
+						overlay.setAttribute('data-is-opaque', window.scrollY > 50 ? 'true' : 'false');
+					}
+				};
+				window.addEventListener('scroll', updateNavbarOpacity, { passive: true });
+				updateNavbarOpacity();
+			});
+		</script>
+		<style>html{background-color:#fdfdf7}html[data-darkmode="true"]{background-color:#09090b}</style>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+		<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+		<meta name="color-scheme" content="light dark">
+		<meta name="view-transition" content="same-origin">
+		<link rel="stylesheet" href="{{ media }}/main.css">
+		<link rel="icon" href="{{ media }}/images/{{ logo_png }}?v={{ icon_cache_version }}" sizes="32x32">
+		{% if (node?.css): %}
+		<link rel="stylesheet" href="{{ resource }}/{{ node.css }}">
+		{% endif %}
+		{% if (css): %}
+		<style title="text/css">{{ css }}</style>
+		{% endif %}
+		{% if (length(tokens)): %}
+		<style>
+			:root {
+				{% for (let key in tokens): %}
+				{% if (index(key, 'light_') == 0 || index(key, 'struct_') == 0): %}
+				--{{ replace(substr(key, index(key, 'light_') == 0 ? 6 : 7), '_', '-') }}: {{ tokens[key] }};
+				{% endif %}
+				{% endfor %}
+			}
+			[data-darkmode="true"] {
+				{% for (let key in tokens): %}
+				{% if (index(key, 'dark_') == 0): %}
+				--{{ replace(substr(key, 5), '_', '-') }}: {{ tokens[key] }};
+				{% endif %}
+				{% endfor %}
+			}
+		</style>
+		{% endif %}
+		<script src="{{ dispatcher.build_url('admin/translations', dispatcher.lang) }}"></script>
+		<script src="{{ resource }}/cbi.js"></script>
+	</head>
+
+	<body class="lang_{{ dispatcher.lang }} {{ entityencode(striptags(node?.title ?? ''), true) }}" data-page="{{ entityencode(join('-', ctx.request_path), true) }}">
+		{% if (!blank_page): %}
+		<header>
+			<div id="header-blur-overlay" class="header-blur-overlay" data-is-opaque="false"></div>
+			<div class="header-content">
+				<a class="brand" href="/"><img class="brand-logo" src="{{ media }}/images/{{ logo_png }}?v={{ icon_cache_version }}" alt="" width="24" height="24"><span class="brand-text">{{ striptags(boardinfo.hostname ?? '?') }}</span></a>
+				<div class="header-spacer"></div>
+				<a class="header-logout-btn" href="{{ dispatcher.build_url('admin/logout') }}">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+					{{ _('Logout') }}
+				</a>
+				<button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+					<svg class="theme-toggle-sun" height="16" stroke-linejoin="round" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.75 1V0.25H6.25V1V1.25V2H7.75V1.25V1ZM7 9C8.10457 9 9 8.10457 9 7C9 5.89543 8.10457 5 7 5C5.89543 5 5 5.89543 5 7C5 8.10457 5.89543 9 7 9ZM7 10.5C8.933 10.5 10.5 8.933 10.5 7C10.5 5.067 8.933 3.5 7 3.5C5.067 3.5 3.5 5.067 3.5 7C3.5 8.933 5.067 10.5 7 10.5ZM7.75 12V12.75V13V13.75H6.25V13V12.75V12H7.75ZM12 6.25H12.75H13H13.75V7.75H13H12.75H12V6.25ZM1 6.25H0.25V7.75H1H1.25H2V6.25H1.25H1ZM10.0052 2.93414L10.5355 2.40381L10.7123 2.22703L11.2426 1.6967L12.3033 2.75736L11.773 3.28769L11.5962 3.46447L11.0659 3.9948L10.0052 2.93414ZM2.22703 10.7123L1.6967 11.2426L2.75736 12.3033L3.28769 11.773L3.46447 11.5962L3.9948 11.0659L2.93414 10.0052L2.40381 10.5355L2.22703 10.7123ZM2.93414 3.9948L2.40381 3.46447L2.22703 3.28769L1.6967 2.75736L2.75736 1.6967L3.28769 2.22703L3.46447 2.40381L3.9948 2.93414L2.93414 3.9948ZM10.7123 11.773L11.2426 12.3033L12.3033 11.2426L11.773 10.7123L11.5962 10.5355L11.0659 10.0052L10.0052 11.0659L10.5355 11.5962L10.7123 11.773Z" fill="currentColor" transform="translate(1.25, 1.25)"></path></svg>
+					<svg class="theme-toggle-moon" height="16" stroke-linejoin="round" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.5 0.25V1V1.5H11L11.75 1.5V3H11H10.5V3.5V4.25H9V3.5V3H8.5H7.75V1.5H8.5H9V1V0.25H10.5ZM3.25514 2.75496C2.33413 3.53491 1.75 4.69972 1.75 6C1.75 8.34721 3.65279 10.25 6 10.25C7.30029 10.25 8.4651 9.66587 9.24505 8.74485C9.16377 8.74827 9.08207 8.74999 9 8.74999C5.82436 8.74999 3.25 6.17563 3.25 2.99999C3.25 2.91792 3.25172 2.83623 3.25514 2.75496ZM0.25 6C0.25 3.51072 1.83142 1.39271 4.042 0.592193L5.00256 1.55275C4.83933 2.00347 4.75 2.49047 4.75 2.99999C4.75 5.3472 6.65279 7.24999 9 7.24999C9.50953 7.24999 9.99653 7.16065 10.4473 6.99743L11.4078 7.95798C10.6073 10.1686 8.48929 11.75 6 11.75C2.82436 11.75 0.25 9.17564 0.25 6Z" fill="currentColor" transform="translate(2.25, 2.25)"></path></svg>
+				</button>
+				<div id="indicators" class="pull-right"></div>
+			</div>
+			<div class="header-row-2" id="mobile-menu-btn">
+				<div class="mobile-menu-toggle-row2" title="{{ _('Menu') }}">
+					<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+						<path d="M2.5 4h11M2.5 8h11M2.5 12h11"/>
+					</svg>
+				</div>
+				<div class="header-breadcrumb">
+					{%
+						const rp = ctx.request_path;
+						const categoryPath = (length(rp) >= 2) ? (rp[0] + "/" + rp[1]) : null;
+						const parent = categoryPath ? dispatcher.lookup(categoryPath) : null;
+						const pagePath = (length(rp) >= 3) ? (rp[0] + "/" + rp[1] + "/" + rp[2]) : null;
+						const pageNode = pagePath ? dispatcher.lookup(pagePath) : null;
+						const categoryTitle = parent?.node?.title;
+						const pageTitle = pageNode?.node?.title ?? dispatched?.title;
+					%}
+					{% if (categoryTitle): %}
+					<span>{{ _(categoryTitle) }}</span>
+					{% endif %}
+					{% if (categoryTitle && pageTitle): %}
+					<svg class="breadcrumb-chevron" width="3" height="24" viewBox="0 -9 3 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M0 0L3 3L0 6"/></svg>
+					{% endif %}
+					{% if (pageTitle): %}
+					<span class="breadcrumb-current">{{ _(pageTitle) }}</span>
+					{% endif %}
+				</div>
+			</div>
+		</header>
+
+		<div class="mobile-menu-overlay" id="mobile-menu-overlay">
+			<div class="mobile-nav-close" id="mobile-nav-close">
+				<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+					<path d="M4 4l8 8M12 4l-8 8"/>
+				</svg>
+			</div>
+			<nav class="mobile-nav">
+				<div class="mobile-nav-header">
+					<a class="brand" href="/"><img class="brand-logo" src="{{ media }}/images/{{ logo_png }}?v={{ icon_cache_version }}" alt="" width="24" height="24"><span class="brand-text">{{ striptags(boardinfo.hostname ?? "?") }}</span></a>
+					<button class="mobile-theme-toggle" id="mobile-theme-toggle" aria-label="Toggle dark mode">
+						<div class="mobile-theme-icons">
+							<span class="mobile-theme-icon-sun">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+									<path d="M8 1.11V2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M12.87 3.13L12.24 3.76" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M14.89 8H14" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M12.87 12.87L12.24 12.24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M8 14.89V14" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M3.13 12.87L3.76 12.24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M1.11 8H2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M3.13 3.13L3.76 3.76" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<circle cx="8" cy="8" r="3.78" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							</span>
+							<span class="mobile-theme-icon-moon">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+									<path d="M11.56 10.44C8.49 10.44 6 7.96 6 4.89C6 3.69 6.38 2.58 7.03 1.67C4.04 2.23 1.78 4.85 1.78 8C1.78 11.56 4.66 14.44 8.22 14.44C11.22 14.44 13.73 12.39 14.45 9.62C13.61 10.14 12.62 10.44 11.56 10.44Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							</span>
+						</div>
+						<div class="mobile-theme-indicator"></div>
+					</button>
+				</div>
+				<a class="header-logout-btn" href="{{ dispatcher.build_url('admin/logout') }}">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+					{{ _('Logout') }}
+				</a>
+				<ul class="mobile-nav-list" id="mobile-nav-list">
+				</ul>
+			</nav>
+		</div>
+
+		<div id="maincontent">
+			<aside class="docs-sidebar" id="sidebar"></aside>
+			<div class="docs-content">
+
+			{% if (getuid() == 0 && getspnam('root')?.pwdp === ''): %}
+				<div class="alert-message warning">
+					<h4>{{ _('No password set!') }}</h4>
+					<p>{{ _('There is no password set on this router. Please configure a root password to protect the web interface.') }}</p>
+					{% if (dispatcher.lookup("admin/system/admin")): %}
+					  <div class="right"><a class="btn" href="{{ dispatcher.build_url("admin/system/admin") }}">{{ _('Go to password configuration...') }}</a></div>
+					{% endif %}
+				</div>
+			{% endif %}
+
+			{% if (boardinfo.rootfs_type == "initramfs"): %}
+				<div class="alert-message warning">
+					<h4>{{ _('System running in recovery (initramfs) mode.') }}</h4>
+					<p>{{ _('No changes to settings will be stored and are lost after rebooting. This mode should only be used to install a firmware upgrade') }}</p>
+					{% if (dispatcher.lookup("admin/system/flash")): %}
+					  <div class="right"><a class="btn" href="{{ dispatcher.build_url("admin/system/flash") }}">{{ _('Go to firmware upgrade...') }}</a></div>
+					{% endif %}
+				</div>
+			{% endif %}
+
+			<noscript>
+				<div class="alert-message warning">
+					<h4>{{ _('JavaScript required!') }}</h4>
+					<p>{{ _('You must enable JavaScript in your browser or LuCI will not work properly.') }}</p>
+				</div>
+			</noscript>
+
+			<div id="tabmenu" style="display:none"></div>
+		{% endif %}
