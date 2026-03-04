@@ -859,8 +859,7 @@
       }
 
       & > .docs-content {
-        @apply flex min-w-0 flex-1 flex-col lg:mt-8;
-        max-width: 720px;
+        @apply flex min-w-0 flex-1 flex-col lg:mt-8 lg:max-w-[720px];
 
         /* Category eyebrow label (e.g. "Status", "System") — matches reference "GETTING STARTED" */
         & > h2 {
@@ -882,7 +881,7 @@
 
       /* ── Sidebar Navigation (container) ── */
       .sidebar-nav {
-        @apply fixed top-14 flex h-[calc(100vh-3.5rem)] flex-col overflow-y-auto pb-8 pt-8;
+        @apply fixed top-14 flex h-[calc(100vh-3.5rem)] flex-col overflow-y-auto pb-8 pt-8 max-lg:hidden;
         width: 18rem;
         z-index: 20;
       }
@@ -1450,7 +1449,7 @@
 
     /* Custom select replacement (JS-driven) */
     .outline-select {
-      @apply relative inline-flex cursor-pointer;
+      @apply relative inline-flex cursor-pointer outline-none;
 
       &.disabled {
         @apply pointer-events-none opacity-60 dark:opacity-50;
@@ -1459,10 +1458,12 @@
 
     .outline-select-trigger {
       @apply text-foreground border-border/60 bg-page-bg flex h-9 items-center gap-2 rounded-lg border px-3 pr-8 text-sm font-normal shadow-sm transition-colors duration-200 hover:bg-muted/40;
+      outline: 2px solid transparent;
+      outline-offset: 0;
     }
 
     .outline-select.open .outline-select-trigger {
-      @apply border-primary ring-primary/20 ring-2;
+      outline-color: color-mix(in oklab, var(--primary) 20%, transparent);
     }
 
     .outline-select-value {
@@ -1497,6 +1498,8 @@
   @layer dropdown {
     .cbi-dropdown {
       @apply inline-flex h-fit max-w-full min-w-fit shrink-0 items-center p-0 whitespace-nowrap shadow-sm backdrop-blur-sm transition-all duration-200;
+      outline: 2px solid transparent;
+      outline-offset: 0;
 
       &[disabled] {
         @apply pointer-events-none opacity-60 dark:opacity-50;
@@ -1574,10 +1577,11 @@
       }
 
       &[open] {
-        @apply border-primary ring-primary/20 relative ring-2;
+        @apply relative;
+        outline-color: color-mix(in oklab, var(--primary) 20%, transparent);
 
         & > ul.dropdown {
-          @apply block w-auto max-w-none;
+          @apply block w-max max-w-none;
 
           & > li {
             @apply flex;
@@ -1654,7 +1658,7 @@
   /* Shared dropdown panel styles (outline-select + cbi-dropdown) */
   .outline-select.open .outline-select-panel,
   .cbi-dropdown[open] > ul.dropdown {
-    @apply border-border/80 bg-page-bg absolute right-0 z-60 block min-w-full max-h-64 overflow-y-auto rounded-lg border p-1.5 shadow-md backdrop-blur-sm;
+    @apply border-border/80 bg-page-bg absolute left-0 z-60 block w-max min-w-full max-w-[calc(100vw-2rem)] max-h-64 overflow-x-auto overflow-y-auto rounded-lg border p-1.5 shadow-md backdrop-blur-sm;
     animation: dropdown-enter 150ms ease-out;
   }
 
@@ -1759,7 +1763,8 @@
         width: auto;
         max-width: 420px;
         margin: 0;
-        padding-right: 2.5rem;
+        padding-left: 44px;
+        padding-right: 1rem;
         box-shadow:
           0 8px 32px rgba(0, 0, 0, 0.35),
           0 0 0 1px oklch(1 0 0 / 0.06);
@@ -1770,7 +1775,12 @@
 
         /* Center the ::before icon within padding-left area */
         &::before {
-          left: 1rem;
+          left: 0.875rem;
+        }
+
+        /* Toasts with close button need extra right padding */
+        &:has(> div:not([class]) > .btn) {
+          padding-right: 2.5rem;
         }
 
         /* X close button — dismiss wrapper is classless div (not .right) */
@@ -1836,13 +1846,21 @@
 
       &::before {
         content: "";
-        @apply absolute left-5 block h-5 w-5 bg-current;
-        top: 19px;
+        @apply absolute left-5 top-1/2 block h-5 w-5 -translate-y-1/2 bg-current;
         mask-size: contain;
         mask-repeat: no-repeat;
         mask-position: center;
         /* Default: info circle icon */
         mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+      }
+
+      &.spinning {
+        padding-left: 44px !important;
+
+        &::before {
+          @apply animate-spin;
+          mask-image: url("@assets/icons/spinning.svg");
+        }
       }
 
       &.modal {
@@ -2121,7 +2139,7 @@
     }
 
     .ifacebox {
-      @apply relative inline-flex min-w-40 flex-col items-stretch overflow-hidden rounded-2xl border text-center text-base leading-5 transition-colors duration-200 max-md:min-w-30 max-md:flex-1;
+      @apply relative inline-flex min-w-40 flex-col items-stretch overflow-clip rounded-2xl border text-center text-base leading-5 transition-colors duration-200 max-md:min-w-30 max-md:flex-1;
       margin: 0 !important;
       max-width: none !important;
       border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
@@ -2139,6 +2157,8 @@
         @apply text-foreground relative z-1 w-full px-4 pt-3 pb-1 text-center text-sm font-semibold tracking-tight max-md:px-3 max-md:pt-3 max-md:pb-1 max-md:text-sm max-md:leading-5 max-md:font-medium;
 
         &[style*="--zone-color-rgb"] {
+          background-color: transparent !important;
+
           &::before {
             content: "";
             @apply pointer-events-none absolute -z-1;
@@ -2148,9 +2168,9 @@
             right: -20%;
             background: radial-gradient(
               ellipse at center top,
-              rgb(var(--zone-color-rgb) / 0.25) 0%,
-              rgb(var(--zone-color-rgb) / 0.08) 35%,
-              transparent 65%
+              rgba(var(--zone-color-rgb), 0.3) 0%,
+              rgba(var(--zone-color-rgb), 0.1) 40%,
+              transparent 70%
             );
             filter: blur(12px);
           }
@@ -2263,11 +2283,11 @@
       @apply pointer-events-none fixed top-0 bottom-0 hidden overflow-auto bg-transparent;
 
       .modal-overlay-active & {
-        @apply bg-overlay-base/70 pointer-events-auto inset-0 right-0 left-0 z-100 grid grid-cols-1 place-items-center backdrop-blur-sm;
+        @apply bg-overlay-base/70 pointer-events-auto inset-0 right-0 left-0 z-100 grid grid-cols-1 place-items-center p-6 backdrop-blur-sm max-md:p-3;
       }
 
       & > .modal {
-        @apply border-border/50 bg-page-bg flex w-4xl max-h-[90vh] flex-col gap-4 overflow-y-auto rounded-xl border p-6 wrap-break-word whitespace-normal shadow-2xl backdrop-blur-lg backdrop-saturate-150 max-md:w-full max-md:max-h-[95vh] max-md:gap-3 max-md:p-4;
+        @apply border-border/50 bg-page-bg flex w-4xl max-w-full max-h-[90vh] flex-col gap-4 overflow-y-auto rounded-xl border p-6 wrap-break-word whitespace-normal shadow-2xl backdrop-blur-lg backdrop-saturate-150 max-md:max-h-[95vh] max-md:gap-3 max-md:p-4;
 
         & h4 {
           @apply mb-0 text-center;
@@ -2386,6 +2406,43 @@
           }
         }
       }
+    }
+
+    /* Modal entrance/exit animations */
+    .modal-overlay-active & {
+      animation: modal-overlay-enter 200ms ease-out;
+    }
+
+    .modal-overlay-exit & {
+      animation: modal-overlay-exit 150ms ease-in forwards;
+    }
+
+    & > .modal {
+      animation: modal-enter 200ms ease-out;
+
+      &.modal-exit {
+        animation: modal-exit 150ms ease-in forwards;
+      }
+    }
+
+    @keyframes modal-overlay-enter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes modal-overlay-exit {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    @keyframes modal-enter {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes modal-exit {
+      from { opacity: 1; transform: scale(1) translateY(0); }
+      to { opacity: 0; transform: scale(0.96) translateY(8px); }
     }
   }
 
@@ -2705,8 +2762,12 @@
       }
 
       &[id*="status_leases"] {
+        table-layout: fixed;
+
+        & td,
         & .td {
-          @apply max-w-62 max-md:max-w-full;
+          @apply max-md:max-w-full;
+          word-break: break-all;
         }
       }
 
@@ -2820,7 +2881,7 @@
       }
 
       & > .cbi-value-field {
-        @apply max-w-full justify-self-end text-right;
+        @apply max-w-full justify-self-end text-right pr-1;
         grid-column: 2;
 
         @media (width < 48rem) {
@@ -2857,7 +2918,7 @@
     }
 
     .cbi-dynlist {
-      @apply inline-flex w-full flex-row flex-wrap items-start gap-2;
+      @apply flex w-full flex-row flex-wrap items-start gap-2;
 
       & .item {
         @apply border-border/80 bg-panel-bg pointer-events-auto relative inline-flex grow cursor-move items-center gap-2 overflow-hidden rounded-xl border py-2 pr-9 pl-3.5 text-left font-mono text-sm leading-snug shadow-sm transition-all duration-200 select-text max-md:py-1.5 max-md:pr-8 max-md:pl-3;
@@ -2874,7 +2935,7 @@
 
         & > span,
         & > code {
-          @apply pointer-events-none w-full rounded-lg font-mono leading-relaxed;
+          @apply pointer-events-none w-full rounded-lg font-mono leading-relaxed break-all;
         }
       }
 
@@ -3019,6 +3080,7 @@
 
     .cbi-section-node {
       @apply flex flex-col gap-0 pt-6;
+      overflow: visible !important;
 
       & > .cbi-value + .cbi-value {
         @apply border-border/40 border-t;

@@ -141,8 +141,8 @@
 				</button>
 				<div id="indicators" class="pull-right"></div>
 			</div>
-			<div class="header-row-2" id="mobile-menu-btn">
-				<div class="mobile-menu-toggle-row2" title="{{ _('Menu') }}">
+			<div class="header-row-2">
+				<div class="mobile-menu-toggle-row2" id="mobile-menu-btn" title="{{ _('Menu') }}">
 					<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
 						<path d="M2.5 4h11M2.5 8h11M2.5 12h11"/>
 					</svg>
