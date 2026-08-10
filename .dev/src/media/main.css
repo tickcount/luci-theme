@@ -859,7 +859,10 @@
       }
 
       & > .docs-content {
-        @apply flex min-w-0 flex-1 flex-col lg:mt-8 lg:max-w-[720px];
+        /* No fixed cap: #maincontent is already bounded at 90rem, and the
+           720px cap left 384px of that unused on a 2560px viewport while
+           LuCI's own tables overflowed their container. */
+        @apply flex min-w-0 flex-1 flex-col lg:mt-8 lg:max-w-none;
 
         /* Category eyebrow label (e.g. "Status", "System") — matches reference "GETTING STARTED" */
         & > h2 {
@@ -874,9 +877,14 @@
       }
 
       & > .docs-toc {
-        @apply hidden shrink-0 xl:block;
-        width: 16.5rem;
-        margin-left: 2.5rem;
+        /* Pages with fewer than two sections build no TOC. Reserving the
+           gutter regardless cost 304px of content width on those pages. */
+        @apply hidden shrink-0;
+        &:has(.toc-link) {
+          @apply xl:block;
+          width: 16.5rem;
+          margin-left: 2.5rem;
+        }
       }
 
       /* ── Sidebar Navigation (container) ── */
@@ -1627,8 +1635,13 @@
         }
       }
 
+      /* Same chevron, same motion as .outline-select. The two widgets sit
+         side by side on the same form — LuCI renders one, the theme renders
+         the other — and only the theme's was turning over on open, which is
+         the difference between the two that shows most. */
       & > .open {
         @apply text-muted-foreground flex flex-none shrink-0 cursor-pointer items-center justify-center border-0 pr-2.5 pl-2 text-[0px] leading-none;
+        @apply transition-transform duration-200;
 
         &::after {
           content: "";
@@ -1636,6 +1649,10 @@
           background: currentColor;
           mask: url("@assets/icons/arrow-down.svg") center / cover no-repeat;
         }
+      }
+
+      &[open] > .open {
+        @apply rotate-180;
       }
 
       & > .more {
@@ -1660,6 +1677,26 @@
   .cbi-dropdown[open] > ul.dropdown {
     @apply border-border/80 bg-page-bg absolute left-0 z-60 block w-max min-w-full max-w-[calc(100vw-2rem)] max-h-64 overflow-x-auto overflow-y-auto rounded-lg border p-1.5 shadow-md backdrop-blur-sm;
     animation: dropdown-enter 150ms ease-out;
+  }
+
+  /* In the top layer the panel is positioned in viewport coordinates by JS,
+     so it must not keep the absolute placement above. The UA popover sheet
+     also supplies its own border, padding and colours — neutralise those and
+     let the shared panel rule win. */
+  .outline-select-panel[popover],
+  .cbi-dropdown-popover[popover] {
+    @apply fixed! z-[9999] m-0 border-none bg-transparent p-0 text-inherit;
+  }
+
+  .outline-select.open .outline-select-panel[popover],
+  .cbi-dropdown[open] > ul.dropdown[popover] {
+    @apply border-border/80 bg-page-bg block rounded-lg border p-1.5;
+  }
+
+  /* Popovers are already clipped to the top layer, so a panel that flips
+     above its trigger needs no offset trickery. */
+  .outline-select-panel[popover].above {
+    @apply mt-0 mb-0;
   }
 
   /* Shared dropdown option styles */
@@ -2033,6 +2070,15 @@
         @apply border-primary font-semibold;
       }
 
+      /* LuCI's list views park a badge in a <div class="center"> as the first
+         column. Left to size themselves the badges came out ragged — measured
+         96, 138, 94 and 141px wide and 38 or 44px tall in one four-row table,
+         inside a column that is a uniform 186px. Filling the wrapper makes a
+         column of identical blocks. */
+      .center > & {
+        @apply flex w-full min-h-11 justify-center;
+      }
+
       &.large {
         @apply min-w-[200px] flex-1 px-4 py-3 max-md:min-w-[180px] max-md:px-3 max-md:py-2.5;
       }
@@ -2043,7 +2089,17 @@
     .cbi-section {
       @apply mb-0 overflow-visible rounded-none border-b-0 p-0 pb-8;
 
-      & > div {
+      /* A table wider than the content column has to scroll inside its own
+         box. Some views wrap their table in a div, others — UPnP among them —
+         put the table straight into the section, and that case was clipped by
+         nobody: a 933px table in a 752px column simply spilled 181px to the
+         right, sliding under the fixed table of contents.
+
+         Dropdowns render in the top layer now, so an overflow container no
+         longer traps them and the old `overflow: visible` escape hatch, which
+         let content spill whenever a dropdown happened to be open, is gone. */
+      & > div,
+      &:has(> table) {
         @apply overflow-x-auto;
       }
 
@@ -2149,8 +2205,13 @@
         border-color: var(--primary);
       }
 
+      /* One box per row in the interface list, each sized to its own contents:
+         measured 198x179 for a bridge carrying several ports next to 160x136
+         for a plain wan, so the column came out ragged. Filling the cell gives
+         every box the column's width, and the floor keeps a sparse box from
+         collapsing shorter than the rest. */
       td & {
-        @apply max-md:flex-row;
+        @apply w-full min-h-34 max-md:flex-row;
       }
 
       & .ifacebox-head {
@@ -2736,7 +2797,7 @@
 
       & th,
       & .th {
-        @apply border-border/50 border-b bg-transparent px-3 py-2 text-left text-base font-semibold first:pl-0 max-md:flex-[1_1_50%] max-md:border-0 max-md:text-sm;
+        @apply border-border/50 border-b bg-transparent px-3 py-2 text-left align-top text-base font-semibold first:pl-0 max-md:flex-[1_1_50%] max-md:border-0 max-md:text-sm;
 
         #cbi-samba4 & {
           @apply px-0.5 py-1.5;
@@ -2761,19 +2822,29 @@
         }
       }
 
+      /* table-layout: fixed used to hold long DUIDs in check, but it hands
+         every column the same share regardless of content: the actions column
+         got 107px for a 113px button, clipping it, and left the table 5px
+         wider than its box — enough for a scrollbar with nothing to scroll.
+         overflow-wrap on the cells covers the long-value case on its own. */
       &[id*="status_leases"] {
-        table-layout: fixed;
-
         & td,
         & .td {
-          @apply max-md:max-w-full;
-          word-break: break-all;
+          @apply max-md:max-w-full [overflow-wrap:anywhere];
+        }
+
+        & td.cbi-section-actions,
+        & .td.cbi-section-actions {
+          @apply w-px whitespace-nowrap;
         }
       }
 
       & td,
       & .td {
-        @apply text-muted-foreground border-border/30 table-cell border-b px-3 py-2 align-middle text-base first:pl-0 wrap-break-word whitespace-normal max-md:flex-[1_1_50%] max-md:border-0 max-md:px-1 max-md:py-1 max-md:text-sm;
+        /* align-top, not middle: rows go tall whenever one cell wraps, and
+           middle alignment leaves every short cell floating against it.
+           Single-line rows render identically either way. */
+        @apply text-muted-foreground border-border/30 table-cell border-b px-3 py-2 align-top text-base first:pl-0 wrap-break-word whitespace-normal max-md:flex-[1_1_50%] max-md:border-0 max-md:px-1 max-md:py-1 max-md:text-sm;
         @apply before:hidden before:content-[attr(data-title)] before:max-md:mb-1 before:max-md:block before:max-md:text-xs before:max-md:font-semibold before:max-md:tracking-wider;
 
         #cbi-samba4 & {
@@ -2784,8 +2855,10 @@
           @apply max-w-104 max-md:max-w-full;
         }
 
+        /* Rows here are unusually tall (the Rx/Tx rate cell wraps), so they
+           get a little more breathing room. Top alignment is global now. */
         #wifi_assoclist_table & {
-          @apply max-md:flex-[0_0_100%] max-md:px-3 max-md:py-2 before:max-md:mb-1.5;
+          @apply py-3 max-md:flex-[0_0_100%] max-md:px-3 max-md:py-2 before:max-md:mb-1.5;
         }
 
         & > input[type="text"],
@@ -2795,8 +2868,13 @@
           @apply w-full;
         }
 
+        /* break-all splits every word mid-character, which shreds non-latin
+           prose ("Статический" → "Статическ / ий"). anywhere breaks only
+           words that genuinely do not fit, and still lets the column shrink
+           below its longest word — which is what break-all was there for. */
         &.cbi-value-field {
-          @apply break-all;
+          @apply [overflow-wrap:anywhere];
+          word-break: normal;
         }
 
         &.cbi-section-actions {
@@ -2884,6 +2962,17 @@
         @apply max-w-full justify-self-end text-right pr-1;
         grid-column: 2;
 
+        /* Each control was as wide as its own text, so a column of them ended
+           flush right and started anywhere: measured left edges at 1048, 1112,
+           1140, 1190, 1225 and 1297 down a single form. A shared floor lines
+           them up — the longest label here needs 291px, so at 288px even that
+           one lands within a few pixels of the rest instead of jutting out. */
+        & > .cbi-dropdown,
+        & > .outline-select,
+        & > select {
+          @apply min-w-72 max-md:min-w-0;
+        }
+
         @media (width < 48rem) {
           justify-self: stretch;
           text-align: left;
@@ -2935,12 +3024,12 @@
 
         & > span,
         & > code {
-          @apply pointer-events-none w-full rounded-lg font-mono leading-relaxed break-all;
+          @apply pointer-events-none w-full rounded-lg font-mono leading-relaxed [overflow-wrap:anywhere];
         }
       }
 
       & .placeholder {
-        @apply break-all;
+        @apply [overflow-wrap:anywhere];
       }
 
       & .add-item {
@@ -2950,8 +3039,13 @@
           @apply min-w-61 flex-1;
         }
 
+        /* Sized as a round glyph button, which is what most dynamic lists put
+           here. The SSH keys view labels it "Добавить ключ" instead, and a
+           fixed 24px circle squeezed that to 24px against 44px of text, so it
+           wrapped and spilled. Width now follows the content: still a circle
+           for a bare "+", a pill when there is a label. */
         & > .cbi-button {
-          @apply inline-flex h-6! w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-muted p-0 text-sm font-medium text-muted-foreground shadow-none transition-colors duration-150 hover:bg-primary/10 hover:text-primary active:scale-95;
+          @apply inline-flex h-6! w-auto min-w-6 shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border-0 bg-muted px-2 py-0 text-sm font-medium text-muted-foreground shadow-none transition-colors duration-150 hover:bg-primary/10 hover:text-primary active:scale-95;
         }
       }
     }
@@ -3325,6 +3419,21 @@
   @layer admin-network-network {
     [data-name="bridge-vlan"] > div {
       @apply max-md:overflow-visible!;
+    }
+  }
+
+  @layer admin-network-firewall {
+    /* luci-mod-firewall lays the zone pair out as a nowrap flex row. On a
+       narrow screen its two badge groups shrink below their own content —
+       measured at 27px for a group needing 86 — and the badges spill out of
+       the cell. Let the groups keep their width and stack instead. */
+    .zone-forwards {
+      @apply max-md:flex-wrap;
+
+      & > .zone-src,
+      & > .zone-dest {
+        @apply min-w-fit;
+      }
     }
   }
 

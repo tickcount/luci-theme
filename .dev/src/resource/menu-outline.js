@@ -11,6 +11,7 @@ return baseclass.extend({
     this.initVercelTabs();
     this.initTabContentAnimation();
     this.initCustomSelects();
+    this.initCbiDropdownFix();
     this.initDescriptionPlacement();
     this.initTableOfContents();
     this.initToastAutoDismiss();
@@ -568,17 +569,78 @@ return baseclass.extend({
 
     move();
 
-    const target = document.getElementById("maincontent") || document.body;
-    new MutationObserver(() => requestAnimationFrame(move)).observe(target, {
-      childList: true,
-      subtree: true,
-    });
+    /* body, not #maincontent — form rows inside a modal live outside
+       #maincontent, so their descriptions were only relocated whenever some
+       unrelated poll mutated the page behind the modal. That showed up as the
+       description jumping columns a moment after the modal opened. */
+    new MutationObserver(() => requestAnimationFrame(move)).observe(
+      document.body,
+      { childList: true, subtree: true },
+    );
+  },
+
+  /* Both dropdown widgets put their panel in the top layer and position it in
+     viewport coordinates. Without this a panel is a normal absolutely
+     positioned child, so a modal's own overflow box clips it, and LuCI's
+     .cbi-dropdown and the theme's .outline-select end up placed by two
+     different mechanisms on the same form. */
+  hasPopover: () =>
+    typeof HTMLElement !== "undefined" &&
+    Object.prototype.hasOwnProperty.call(HTMLElement.prototype, "popover"),
+
+  placePopover(panel, rect) {
+    const set = (prop, value) => panel.style.setProperty(prop, value, "important");
+    const GAP = 8;
+
+    set("position", "fixed");
+    set("margin", "0");
+    /* The UA stylesheet gives popovers inset: 0; leaving `right` at 0 would
+       stretch the panel to the far edge of the window. */
+    set("right", "auto");
+    panel.style.minWidth = `${rect.width}px`;
+    panel.style.maxWidth = `${window.innerWidth - 16}px`;
+    set("left", `${rect.left}px`);
+
+    /* Flip above only when the panel genuinely does not fit below and there is
+       more room above — decided from the panel's own height rather than a flat
+       200px guess, which used to flip panels that fitted perfectly well and
+       left them sitting on top of the field they belong to. */
+    const panelH = panel.getBoundingClientRect().height || 0;
+    const below = window.innerHeight - rect.bottom - GAP;
+    const above = rect.top - GAP;
+    const flip = panelH > below && above > below;
+
+    if (flip) {
+      set("top", "auto");
+      set("bottom", `${Math.max(GAP, window.innerHeight - rect.top)}px`);
+    } else {
+      /* Keep the panel on screen even when its trigger is scrolled to the
+         very edge, rather than letting it hang off. */
+      const top = Math.min(rect.bottom, window.innerHeight - Math.min(panelH, window.innerHeight - GAP) - GAP);
+      set("top", `${Math.max(GAP, top)}px`);
+      set("bottom", "auto");
+    }
+
+    return flip;
+  },
+
+  /* Panels are often wider than their trigger, and width is only measurable
+     once the panel is in the top layer. Re-align it then. */
+  clampPopover(panel, rect) {
+    const width = panel.getBoundingClientRect().width;
+    if (!width) return;
+    const maxLeft = window.innerWidth - width - 8;
+    panel.style.setProperty(
+      "left",
+      `${Math.max(8, Math.min(rect.left, maxLeft))}px`,
+      "important",
+    );
   },
 
   closeAllDropdowns(except) {
     // Close all outline-selects
     document.querySelectorAll(".outline-select.open").forEach((s) => {
-      if (s !== except) s.classList.remove("open");
+      if (s !== except) s.dispatchEvent(new CustomEvent("outline-select-close"));
     });
     // Close all cbi-dropdowns
     document.querySelectorAll(".cbi-dropdown[open]").forEach((d) => {
@@ -613,6 +675,7 @@ return baseclass.extend({
 
       const panel = document.createElement("div");
       panel.className = "outline-select-panel";
+      if (this.hasPopover()) panel.setAttribute("popover", "manual");
 
       const buildOptions = () => {
         panel.innerHTML = "";
@@ -647,14 +710,37 @@ return baseclass.extend({
 
       let isOpen = false;
 
+      const isPopover = () => panel.hasAttribute("popover");
+
+      /* Follow the trigger per frame while open — see initCbiDropdownFix for
+         why scroll and resize events alone leave the panel behind. */
+      const reposition = () => {
+        if (!isOpen || !isPopover()) return;
+        const rect = wrap.getBoundingClientRect();
+        panel.classList.toggle("above", this.placePopover(panel, rect));
+        this.clampPopover(panel, rect);
+        requestAnimationFrame(reposition);
+      };
+
       const open = () => {
         if (isOpen || sel.disabled) return;
         this.closeAllDropdowns(wrap);
         isOpen = true;
         wrap.classList.add("open");
         const rect = wrap.getBoundingClientRect();
-        const below = window.innerHeight - rect.bottom;
-        panel.classList.toggle("above", below < 200 && rect.top > 200);
+
+        if (isPopover()) {
+          panel.classList.toggle("above", this.placePopover(panel, rect));
+          try {
+            panel.showPopover();
+          } catch (e) {}
+          this.clampPopover(panel, rect);
+          requestAnimationFrame(reposition);
+        } else {
+          const below = window.innerHeight - rect.bottom;
+          panel.classList.toggle("above", below < 200 && rect.top > 200);
+        }
+
         const cur = panel.querySelector(".selected");
         if (cur) cur.scrollIntoView({ block: "nearest" });
       };
@@ -663,7 +749,14 @@ return baseclass.extend({
         if (!isOpen) return;
         isOpen = false;
         wrap.classList.remove("open");
+        if (isPopover()) {
+          try {
+            panel.hidePopover();
+          } catch (e) {}
+        }
       };
+
+      wrap.addEventListener("outline-select-close", close);
 
       trigger.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -716,10 +809,105 @@ return baseclass.extend({
       }
     });
 
-    const target = document.getElementById("maincontent") || document.body;
+    /* body, not #maincontent — LuCI mounts #modal_overlay on body, so selects
+       rendered inside a modal would keep their unstyled native look. */
     new MutationObserver(() => {
       requestAnimationFrame(replaceAll);
-    }).observe(target, { childList: true, subtree: true });
+    }).observe(document.body, { childList: true, subtree: true });
+  },
+
+  /* LuCI's own dropdown positions its list itself, in the coordinate space of
+     whatever container it sits in. Inside a modal that container has its own
+     overflow box, which clips the list. Hand the list to the top layer and
+     position it the same way .outline-select is positioned, so both widgets
+     behave identically. */
+  initCbiDropdownFix() {
+    if (!this.hasPopover()) return;
+
+    /* Hand the list back exactly as it was found. LuCI swaps the `dropdown`
+       and `preview` classes between its two <ul>s as the widget opens and
+       closes, so over one cycle both of them are, at some moment, `ul.dropdown`.
+       Marking a list as a popover permanently therefore caught the closed-state
+       value display too, which then floated free of the page — measured at
+       x=3359 on a 2560px viewport, i.e. off screen entirely, and showing up as
+       a stray label near the top of the window. */
+    const release = (ul) => {
+      if (!ul || !ul.hasAttribute("popover")) return;
+      try {
+        ul.hidePopover();
+      } catch (e) {}
+      ul.removeAttribute("popover");
+      ul.classList.remove("cbi-dropdown-popover");
+      [
+        "position",
+        "margin",
+        "right",
+        "left",
+        "top",
+        "bottom",
+        "min-width",
+        "max-width",
+      ].forEach((p) => ul.style.removeProperty(p));
+    };
+
+    const updatePosition = (dropdown) => {
+      const open = dropdown.hasAttribute("open");
+      const list = open ? dropdown.querySelector("ul.dropdown") : null;
+
+      /* Anything that is not the currently open list goes back to LuCI */
+      dropdown.querySelectorAll("ul").forEach((ul) => {
+        if (ul !== list) release(ul);
+      });
+
+      if (!list) return;
+
+      if (!list.hasAttribute("popover")) {
+        list.setAttribute("popover", "manual");
+        list.classList.add("cbi-dropdown-popover");
+      }
+
+      const rect = dropdown.getBoundingClientRect();
+      this.placePopover(list, rect);
+      try {
+        list.showPopover();
+      } catch (e) {}
+      this.clampPopover(list, rect);
+    };
+
+    new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        if (m.type !== "attributes" || m.attributeName !== "open") return;
+        updatePosition(m.target);
+        if (m.target.hasAttribute("open")) this.followCbiDropdowns();
+      });
+    }).observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["open"],
+    });
+
+    /* Scroll and resize handlers are not enough: the page can move under an
+       open panel without either firing — a sticky header collapsing, a poll
+       reflowing the view, a nested container scrolling — and the panel is then
+       left at a stale offset, which is how one ended up pinned to the top of
+       the window while its field sat mid-page. Following per frame while
+       something is open cannot fall behind, and costs nothing when nothing is
+       open because the loop stops. */
+    let following = false;
+    const follow = () => {
+      const open = document.querySelectorAll(".cbi-dropdown[open]");
+      open.forEach((d) => updatePosition(d));
+      following = open.length > 0;
+      if (following) requestAnimationFrame(follow);
+    };
+
+    this.followCbiDropdowns = () => {
+      if (following) return;
+      following = true;
+      requestAnimationFrame(follow);
+    };
+
+    window.addEventListener("resize", () => this.followCbiDropdowns());
   },
 
   initMobileMenu() {
@@ -1016,17 +1204,49 @@ return baseclass.extend({
     let scrollCleanup = null;
     let prevKey = "";
 
+    const clean = (s) => s.replace(/\s+/g, " ").trim();
+
+    /* Section headings carry inline controls — the collapse toggle labelled
+       "Hide", the poll indicator, status badges. Taking h3.textContent whole
+       glued those in, which is where "SystemHide" came from. */
+    const headingText = (h3) => {
+      const copy = h3.cloneNode(true);
+      copy
+        .querySelectorAll(
+          "svg, button, input, select, .label, .btn, .cbi-button, [data-clickable], [data-indicator], [data-tooltip]",
+        )
+        .forEach((el) => el.remove());
+      /* A heading titled purely by a link keeps its full text as fallback */
+      return clean(copy.textContent) || clean(h3.textContent);
+    };
+
+    /* "-" and friends carry no letters, so they cannot name a destination */
+    const isUsableTitle = (text) => /[\p{L}\p{N}]/u.test(text);
+
     const buildToc = () => {
-      const sections = document.querySelectorAll(
+      const headings = document.querySelectorAll(
         "#view .cbi-section:not([data-tab-title]) > .cbi-title > h3, #view .cbi-section:not([data-tab-title]) > h3",
       );
 
-      /* Build a key from section count + heading texts to detect real changes */
-      const key = Array.from(sections, (h) => h.textContent.trim()).join("|");
+      const entries = [];
+      headings.forEach((h3) => {
+        const title = headingText(h3);
+        const section = h3.closest(".cbi-section");
+        if (!section || !isUsableTitle(title)) return;
+        /* A section LuCI renders but leaves empty — DSL on hardware that has
+           none — is not a place you can scroll to. Listing it gave an entry
+           that nudged the page a few pixels and highlighted nothing. */
+        if (!section.offsetHeight) return;
+        entries.push({ section, title });
+      });
+
+      /* Key on titles and on height, so the TOC is rebuilt when a section
+         that was still empty at first paint gains content. */
+      const key = entries.map((e) => e.title).join("|");
       if (key === prevKey) return; /* skip rebuild if headings unchanged */
       prevKey = key;
 
-      if (sections.length < 2) {
+      if (entries.length < 2) {
         tocContainer.innerHTML = "";
         if (scrollCleanup) scrollCleanup();
         return;
@@ -1052,19 +1272,25 @@ return baseclass.extend({
 
       const sectionElements = [];
 
-      sections.forEach((h3, i) => {
-        const id = "section-" + i;
-        const section = h3.closest(".cbi-section");
-        if (section) {
-          section.id = id;
-          sectionElements.push(section);
-        }
+      /* A click wins over the scroll position for as long as the smooth
+         scroll runs, so the entry you picked is the one highlighted. */
+      let pinnedIdx = -1;
+      let pinnedUntil = 0;
+      const pinIndex = (idx, ms) => {
+        pinnedIdx = idx;
+        pinnedUntil = performance.now() + ms;
+        updateActive();
+      };
 
-        const text = h3.textContent.trim();
+      entries.forEach(({ section, title }, i) => {
+        const id = "section-" + i;
+        section.id = id;
+        sectionElements.push(section);
+
         const link = E(
           "a",
           { class: "toc-link", href: "#" + id, "data-target": id },
-          [text],
+          [title],
         );
 
         link.addEventListener("click", (e) => {
@@ -1078,8 +1304,14 @@ return baseclass.extend({
             el.getBoundingClientRect().top + window.scrollY - headerOffset;
           const startY = window.scrollY;
           const dist = targetY - startY;
-          if (Math.abs(dist) < 1) return;
           const dur = Math.min(600, 200 + Math.abs(dist) * 0.08);
+
+          /* Clicking an entry must light it up even when the page cannot
+             scroll far enough to bring that section past the fold — which is
+             most of them on a short page. */
+          pinIndex(i, dur + 150);
+
+          if (Math.abs(dist) < 1) return;
           const t0 = performance.now();
           const step = (now) => {
             const p = Math.min((now - t0) / dur, 1);
@@ -1100,15 +1332,20 @@ return baseclass.extend({
         tocContainer.appendChild(tocInner);
 
         /* Keep fixed toc aligned with its flex-child wrapper */
-        const syncTocLeft = () => {
+        tocInner._syncLeft = () => {
           tocInner.style.left = tocContainer.getBoundingClientRect().left + "px";
         };
-        syncTocLeft();
-        window.addEventListener("resize", syncTocLeft);
+        window.addEventListener("resize", tocInner._syncLeft);
       }
       tocInner.innerHTML = "";
       tocInner.appendChild(heading);
       tocInner.appendChild(list);
+
+      /* Only now does .docs-toc match :has(.toc-link) and become visible, so
+         only now does it have a real left edge. Measuring any earlier — as
+         this did when the wrapper was first created — pinned the fixed panel
+         to left: 0, i.e. the far side of the window. */
+      tocInner._syncLeft();
 
       /* Scroll-spy via scroll event */
       const links = tocContainer.querySelectorAll(".toc-link");
@@ -1123,22 +1360,45 @@ return baseclass.extend({
         return top;
       };
 
-      const updateActive = () => {
-        let activeIdx = 0;
-        const scrollY = window.scrollY + headerOffset + 20;
+      const lastVisibleIdx = () => {
+        for (let i = sectionElements.length - 1; i >= 0; i--)
+          if (sectionElements[i]?.offsetHeight) return i;
+        return 0;
+      };
 
-        for (let i = sectionElements.length - 1; i >= 0; i--) {
-          const s = sectionElements[i];
-          if (!s || s.offsetHeight === 0) continue;
-          if (getSectionTop(s) <= scrollY) {
-            activeIdx = i;
-            break;
-          }
+      const applyActive = (idx) =>
+        links.forEach((l, i) => l.classList.toggle("active", i === idx));
+
+      const updateActive = () => {
+        if (performance.now() < pinnedUntil && pinnedIdx >= 0) {
+          applyActive(pinnedIdx);
+          return;
         }
 
-        links.forEach((l, i) => {
-          l.classList.toggle("active", i === activeIdx);
-        });
+        /* The fold sits a third of the way down the screen rather than just
+           under the header. Measured on the firewall page: it scrolls 470px
+           while its second section starts at 796px and its third at 1081px,
+           so with a header-height threshold neither could ever be reached, no
+           matter how far you scrolled. A proportional fold activates a section
+           once it has climbed into view. */
+        const fold =
+          window.scrollY +
+          Math.max(headerOffset + 20, window.innerHeight * 0.35);
+
+        let activeIdx = 0;
+        for (let i = 0; i < sectionElements.length; i++) {
+          const s = sectionElements[i];
+          if (!s || s.offsetHeight === 0) continue;
+          if (getSectionTop(s) <= fold) activeIdx = i;
+        }
+
+        /* At the very bottom the remaining sections share one screenful and
+           none of them will cross the fold — hand it to the last one. */
+        const doc = document.documentElement;
+        if (window.scrollY + window.innerHeight >= doc.scrollHeight - 2)
+          activeIdx = lastVisibleIdx();
+
+        applyActive(activeIdx);
       };
 
       if (scrollCleanup) scrollCleanup();
