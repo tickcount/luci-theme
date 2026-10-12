@@ -1,0 +1,229 @@
+table.table,
+.table {
+  @apply border-border bg-panel-bg mb-4 w-full border-separate border-spacing-0 overflow-visible rounded-2xl border text-sm leading-5 max-md:block max-md:rounded-2xl;
+
+  &[width="100%"] {
+    @apply w-full;
+  }
+  &[width="33%"] {
+    @apply w-1/3;
+  }
+
+  .cbi-section-table-titles {
+    @apply font-medium;
+  }
+
+  .cbi-section-table-titles.named,
+  .cbi-section-table-descr.named,
+  .cbi-section-table-row[data-title] {
+    @apply before:border-border before:table-cell before:border-b before:py-2.5 before:pr-3 before:pl-4 before:align-middle before:text-sm before:font-medium before:content-[attr(data-title)];
+    &:not([data-title]),
+    &:has(td.cbi-section-table-titles) {
+      @apply before:content-none;
+    }
+  }
+
+  .cbi-section-table-titles.named {
+    @apply before:rounded-tl-2xl;
+  }
+
+  tbody,
+  .tbody {
+    @apply max-md:block;
+  }
+
+  tr,
+  .tr {
+    @apply max-md:border-border [transition:background-color_.15s] max-md:flex max-md:flex-wrap max-md:border-b max-md:px-3 max-md:py-2.5 max-md:last:border-b-0;
+
+    &:first-child {
+      &:not([data-title]) {
+        .th,
+        .td {
+          @apply md:first:rounded-tl-2xl;
+        }
+      }
+      .th,
+      .td {
+        @apply md:last:rounded-tr-2xl;
+      }
+    }
+
+    &:last-child {
+      &[data-title] {
+        @apply before:border-b-0 md:before:rounded-bl-2xl;
+      }
+      .td {
+        @apply border-b-0 md:first:rounded-bl-2xl md:last:rounded-br-2xl;
+      }
+    }
+
+    &.table-titles,
+    &.cbi-section-table-titles,
+    &.cbi-section-table-descr {
+      @apply max-md:hidden;
+    }
+
+    &:not(
+        .table-titles,
+        .cbi-section-table-titles,
+        .cbi-section-table-descr,
+        .placeholder
+      ):hover
+      > .td {
+      @apply md:bg-sidebar-accent;
+    }
+
+    &.placeholder .td {
+      @apply text-muted-foreground;
+    }
+
+    &.drag-over-above > .td {
+      @apply shadow-[inset_0_2px_0_var(--accent)];
+    }
+    &.drag-over-below > .td {
+      @apply shadow-[inset_0_-2px_0_var(--accent)];
+    }
+  }
+
+  th,
+  .th {
+    @apply border-border text-text-tertiary border-b px-3 py-2.5 text-left text-sm font-medium first:pl-4 last:pr-4 max-md:hidden;
+
+    &[width="100%"] {
+      @apply w-full;
+    }
+    &[width="33%"] {
+      @apply w-1/3;
+    }
+
+    &[data-sortable-row="true"] {
+      @apply hover:text-foreground cursor-pointer select-none after:ml-1 after:text-[10px];
+      &[data-sort-direction="asc"] {
+        @apply after:content-['▲'];
+      }
+      &[data-sort-direction="desc"] {
+        @apply after:content-['▼'];
+      }
+    }
+  }
+
+  td,
+  .td {
+    @apply border-border table-cell border-b px-3 py-2.5 align-middle break-words whitespace-normal [transition:background-color_.15s] first:pl-4 last:pr-4 max-md:flex-[1_1_50%] max-md:border-0 max-md:px-1 max-md:py-1;
+    @apply before:max-md:text-text-tertiary before:hidden before:content-[attr(data-title)] before:max-md:mb-0.5 before:max-md:block before:max-md:text-xs before:max-md:font-normal;
+
+    > input[type="text"],
+    > input[type="password"],
+    select,
+    .cbi-dropdown:not(.btn):not(.cbi-button) {
+      @apply w-full;
+    }
+
+    /* Widgets are nested (td > div > div > widget), so the fixed/min widths
+       from _select.css/_dropdown.css must yield to the column width here. */
+    select,
+    .cbi-dropdown:not(.btn):not(.cbi-button) {
+      @apply min-w-24;
+    }
+
+    &.cbi-value-field {
+      /* Mobile cards: value fields stack one per row —
+         the row title and long match-rule cells get the full width — while
+         display-only widgets below pair up two per row. Desktop wraps only
+         at word boundaries (break-words leaves min-content alone):
+         wrap-anywhere let the auto layout squeeze columns down to one
+         letter ("non|e", MACs split mid-octet). */
+      @apply max-md:mb-1 max-md:basis-full max-md:self-start max-md:text-left max-md:wrap-anywhere md:max-w-prose md:break-words;
+
+      &[data-widget="CBI.DummyValue"],
+      &[data-widget="CBI.Button"],
+      &[data-widget="CBI.FlagValue"],
+      &[data-widget="dvalue"],
+      &[data-widget="button"],
+      &[data-widget="fvalue"] {
+        @apply max-md:basis-1/2;
+      }
+    }
+
+    &.cbi-section-actions {
+      @apply max-md:flex-[0_0_100%];
+    }
+
+    &.cbi-section-actions > div {
+      @apply justify-end;
+
+      > .cbi-button {
+        @apply max-md:flex-1;
+      }
+    }
+
+    > .cbi-button {
+      @apply max-md:w-full;
+    }
+
+    &[width="100%"] {
+      @apply w-full max-md:flex-[0_0_100%];
+    }
+    &[width="33%"] {
+      @apply w-1/3 max-md:flex-[0_0_33.333%];
+    }
+  }
+}
+
+.cbi-section-table .cbi-section-table-titles .cbi-section-table-cell {
+  @apply !w-auto;
+}
+
+/* Div tables (legacy templates, and ui.Table builds div rows when its head
+   is a div): the table model comes from the classes, not the tags. */
+div.table {
+  @apply md:table;
+}
+div.tr {
+  @apply md:table-row;
+}
+div.th,
+div.td {
+  @apply md:table-cell;
+}
+.thead {
+  @apply md:table-header-group;
+}
+.tbody {
+  @apply md:table-row-group;
+}
+.tfoot {
+  @apply md:table-footer-group;
+}
+
+/* ui.Table empty state: one cell spanning the whole table width. */
+.table {
+  @apply relative;
+
+  .tr.placeholder {
+    @apply h-14;
+
+    > .td {
+      @apply text-muted-foreground absolute inset-x-0 bottom-0 border-b-0 py-4 text-center max-md:static max-md:basis-full;
+    }
+  }
+}
+
+/* Key/value info tables (Overview › System and friends: a 33% label cell
+   then the value): the key in ink, medium; the value secondary — ChatGPT's
+   "Username → @handle" settings rows. */
+.table .td[width="33%"]:first-child {
+  @apply text-foreground font-medium;
+
+  + .td {
+    @apply text-muted-foreground;
+  }
+}
+
+/* Links in cells (nlbw's MAC / connection-count drill-downs) read as
+   ChatGPT's inline links: accent ink, underline only on hover — apps'
+   own stylesheets underline them permanently. */
+.table .td a:not(.btn, .cbi-button) {
+  @apply text-info no-underline! hover:underline!;
+}

@@ -1,0 +1,277 @@
+/**
+ * luci-theme-outline: design tokens -- GENERATED, DO NOT EDIT.
+ * Run `pnpm gen:tokens`. Source: tokens/defaults.js + tokens/spec.js
+ * All color values are flat oklch() literals; no dynamic color functions.
+ * Dark mode overrides must stay after light mode block.
+ */
+
+:root {
+  --shell: #f9f9f9;
+  --bg: #fcfcfc;
+  --surface: #fcfcfc;
+  --elevated: #ffffff;
+  --elevated-secondary: #ffffff;
+  --dialog-bg: #fcfcfc;
+  --input-bg: #ffffff;
+  --select-bg: #f3f3f3;
+  --callout: #f3f3f3;
+  --text: #0d0d0d;
+  --text-tertiary: #8f8f8f;
+  --nav-text: #0d0d0dd9;
+  --border: #0000001a;
+  --hover: #0000000d;
+  --soft: #0d0d0d0d;
+  --soft-hover: #0d0d0d1a;
+  --brand: #0d0d0d;
+  --accent: #3a83f7;
+  --on-accent: #ffffff;
+  --link: #2c67c5;
+  --ring: #3a83f7;
+  --success: #00a240;
+  --success-solid: #008635;
+  --success-surface: #edfaf2;
+  --success-surface-fg: #008635;
+  --warning: #e25507;
+  --warning-surface: #fff5f0;
+  --warning-surface-fg: #b9480d;
+  --danger-solid: #e02e2a;
+  --danger-soft: #e02e2a1a;
+  --danger-surface: #fff0f0;
+  --danger-surface-fg: #ba2623;
+  --info-surface: #e8f3fe;
+  --info-surface-fg: #004f99;
+  --tooltip-bg: #0d0d0d;
+  --tooltip-fg: #ffffff;
+  --scrim: #00000040;
+  --switch-off: #0d0d0d1a;
+  --chart-blue: #3a83f7;
+  --chart-green: #00a240;
+  --chart-red: #e02e2a;
+  --chart-orange: #e25507;
+  --chart-yellow: #ffc300;
+  --background: #fcfcfc;
+  --foreground: #0d0d0d;
+  --primary: #0d0d0d;
+  --primary-foreground: #ffffff;
+  --primary-hover: #303030;
+  --panel-bg: #fcfcfc;
+  --panel-border: #0000001a;
+  --muted: #0d0d0d0d;
+  --muted-foreground: #5d5d5d;
+  --input: #00000026;
+  --destructive: #e02e2a;
+  --destructive-fg: oklch(100% 0 0);
+  --success-fg: oklch(100% 0 0);
+  --info: #2c67c5;
+  --warning-fg: oklch(100% 0 0);
+  --sidebar-bg: #f9f9f9;
+  --sidebar-accent: #0000000d;
+  --sidebar-active-bg: #0000000d;
+  --terminal-hover: #0000000d;
+  --terminal-bg: oklch(98.21% 0 none);
+  --accent-a10: oklch(62.55% 0.1884 259.5 / 0.1);
+  --accent-a30: oklch(62.55% 0.1884 259.5 / 0.3);
+  --destructive-a15: oklch(58.99% 0.2134 27.67 / 0.15);
+  --destructive-a20: oklch(58.99% 0.2134 27.67 / 0.2);
+  --foreground-a5: oklch(15.91% 0 none / 0.05);
+  --foreground-a10: oklch(15.91% 0 none / 0.1);
+  --foreground-a30: oklch(15.91% 0 none / 0.3);
+  --success-a15: oklch(62.12% 0.1797 148 / 0.15);
+  --warning-a15: oklch(62.96% 0.1894 41.5 / 0.15);
+  --info-a15: oklch(52.71% 0.1593 259.5 / 0.15);
+  --info-a40: oklch(52.71% 0.1593 259.5 / 0.4);
+  --elevated-secondary-a90: oklch(100% 0 none / 0.9);
+
+  --font-sans:
+    "Geist Variable", Geist, -apple-system, ui-sans-serif, system-ui,
+    "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono:
+    "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", Menlo,
+    Consolas, monospace;
+  /* Kept for on-demand patches/*.css; the corner ladder itself is Tailwind's
+     default scale, which is exactly ChatGPT's (2/4/6/8/12/16/24px). */
+  --radius-base: 0.5rem;
+
+  /* Elevation (ChatGPT): emitted on :root (not just inlined into the shadow-*
+     utilities) so on-demand patches/*.css -- standalone entries that carry no
+     Tailwind helper output -- can reach it as var(--shadow-sm). */
+  --shadow-sm: 0 1px 2px -1px #00000014;
+  --shadow-md: 0 2px 4px -1px #00000014;
+  --shadow-lg: 0 4px 8px -2px #0000001a;
+  --shadow-xl: 0 8px 16px -4px #0000001f;
+  --shadow-2xl: 0 16px 32px -8px #00000030;
+  --shadow-menu: 0 0 0 0.5px var(--border), 0 8px 16px -4px #0000001f;
+}
+
+[data-darkmode="true"] {
+  --shell: #000000;
+  --bg: #000000;
+  --surface: #000000;
+  --elevated: #131313;
+  --elevated-secondary: #1b1b1b;
+  --dialog-bg: #111111;
+  --input-bg: #131313f5;
+  --select-bg: #ededed07;
+  --callout: #1a1a1af5;
+  --text: #ededed;
+  --text-tertiary: #ededed78;
+  --nav-text: #edededd9;
+  --border: #ededed13;
+  --hover: #ededed12;
+  --soft: #ededed0d;
+  --soft-hover: #ededed1a;
+  --brand: #ededed;
+  --accent: #006efe;
+  --on-accent: #ffffff;
+  --link: #5ba2fe;
+  --ring: #5ba2febc;
+  --success: #40c977;
+  --success-solid: #008635;
+  --success-surface: #011c0b;
+  --success-surface-fg: #04b84c;
+  --warning: #ff8549;
+  --warning-surface: #281105;
+  --warning-surface-fg: #ff8549;
+  --danger-solid: #e02e2a;
+  --danger-soft: #ff67641a;
+  --danger-surface: #280b0a;
+  --danger-surface-fg: #fa423e;
+  --info-surface: #001b3f;
+  --info-surface-fg: #339cff;
+  --tooltip-bg: #131313;
+  --tooltip-fg: #ededed;
+  --scrim: #00000099;
+  --switch-off: #ededed1a;
+  --chart-blue: #3a83f7;
+  --chart-green: #40c977;
+  --chart-red: #ff6764;
+  --chart-orange: #fb6a22;
+  --chart-yellow: #ffd240;
+  --background: #000000;
+  --foreground: #ededed;
+  --primary: #ededed;
+  --primary-foreground: #131313;
+  --primary-hover: #dcdcdc;
+  --panel-bg: #000000;
+  --panel-border: #ededed13;
+  --muted: #ededed0d;
+  --muted-foreground: #edededa6;
+  --input: #ededed24;
+  --destructive: #ff6764;
+  --destructive-fg: oklch(100% 0 0);
+  --success-fg: oklch(100% 0 0);
+  --info: #5ba2fe;
+  --warning-fg: oklch(100% 0 0);
+  --sidebar-bg: #000000;
+  --sidebar-accent: #ededed12;
+  --sidebar-active-bg: #ededed12;
+  --terminal-hover: #ededed12;
+  --terminal-bg: oklch(15.91% 0 none);
+  --accent-a10: oklch(57.79% 0.2304 259.6 / 0.1);
+  --accent-a30: oklch(57.79% 0.2304 259.6 / 0.3);
+  --destructive-a15: oklch(70.53% 0.1864 24.23 / 0.15);
+  --destructive-a20: oklch(70.53% 0.1864 24.23 / 0.2);
+  --foreground-a5: oklch(94.61% 0 none / 0.05);
+  --foreground-a10: oklch(94.61% 0 none / 0.1);
+  --foreground-a30: oklch(94.61% 0 none / 0.3);
+  --success-a15: oklch(74.3% 0.1664 152.9 / 0.15);
+  --warning-a15: oklch(74.33% 0.1658 45.11 / 0.15);
+  --info-a15: oklch(70.74% 0.1533 255.7 / 0.15);
+  --info-a40: oklch(70.74% 0.1533 255.7 / 0.4);
+  --elevated-secondary-a90: oklch(22.21% 0 none / 0.9);
+
+  --shadow-menu: inset 0 0 1px 0 #ffffff33, 0 8px 16px -4px #0000001f;
+}
+
+@theme inline {
+  --color-shell: var(--shell);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-elevated-secondary: var(--elevated-secondary);
+  --color-dialog-bg: var(--dialog-bg);
+  --color-input-bg: var(--input-bg);
+  --color-select-bg: var(--select-bg);
+  --color-callout: var(--callout);
+  --color-text: var(--text);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-nav-text: var(--nav-text);
+  --color-border: var(--border);
+  --color-hover: var(--hover);
+  --color-soft: var(--soft);
+  --color-soft-hover: var(--soft-hover);
+  --color-brand: var(--brand);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-link: var(--link);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-solid: var(--success-solid);
+  --color-success-surface: var(--success-surface);
+  --color-success-surface-fg: var(--success-surface-fg);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-surface-fg: var(--warning-surface-fg);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-surface-fg: var(--danger-surface-fg);
+  --color-info-surface: var(--info-surface);
+  --color-info-surface-fg: var(--info-surface-fg);
+  --color-tooltip-bg: var(--tooltip-bg);
+  --color-tooltip-fg: var(--tooltip-fg);
+  --color-scrim: var(--scrim);
+  --color-switch-off: var(--switch-off);
+  --color-chart-blue: var(--chart-blue);
+  --color-chart-green: var(--chart-green);
+  --color-chart-red: var(--chart-red);
+  --color-chart-orange: var(--chart-orange);
+  --color-chart-yellow: var(--chart-yellow);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-panel-bg: var(--panel-bg);
+  --color-panel-border: var(--panel-border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-input: var(--input);
+  --color-destructive: var(--destructive);
+  --color-destructive-fg: var(--destructive-fg);
+  --color-success-fg: var(--success-fg);
+  --color-info: var(--info);
+  --color-warning-fg: var(--warning-fg);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-active-bg: var(--sidebar-active-bg);
+  --color-terminal-hover: var(--terminal-hover);
+  --color-terminal-bg: var(--terminal-bg);
+  --color-accent-a10: var(--accent-a10);
+  --color-accent-a30: var(--accent-a30);
+  --color-destructive-a15: var(--destructive-a15);
+  --color-destructive-a20: var(--destructive-a20);
+  --color-foreground-a5: var(--foreground-a5);
+  --color-foreground-a10: var(--foreground-a10);
+  --color-foreground-a30: var(--foreground-a30);
+  --color-success-a15: var(--success-a15);
+  --color-warning-a15: var(--warning-a15);
+  --color-info-a15: var(--info-a15);
+  --color-info-a40: var(--info-a40);
+  --color-elevated-secondary-a90: var(--elevated-secondary-a90);
+
+  --color-sidebar-fg: var(--sidebar-foreground);
+  --color-terminal-fg: var(--terminal-foreground);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+  --shadow-menu: var(--shadow-menu);
+
+  --ease-enter: cubic-bezier(0.19, 1, 0.22, 1);
+}

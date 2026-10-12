@@ -1,0 +1,179 @@
+/* ChatGPT dialog: 680px max, 16px corners, 20px padding, 16px rhythm, title
+   20/28 semibold, a soft lg shadow over a light scrim. #modal_overlay and
+   .modal are ui.js's own nodes, direct children of <body> — never wrapped
+   or reparented (modal map Save/Dismiss query that exact path). */
+#modal_overlay {
+  @apply pointer-events-none invisible fixed inset-0 z-50 hidden overflow-auto bg-transparent outline-none;
+
+  .modal-overlay-active & {
+    @apply bg-scrim pointer-events-auto visible grid place-items-center p-4 max-md:p-3;
+  }
+
+  > .modal {
+    @apply bg-dialog-bg text-foreground flex w-full max-w-[680px] flex-col gap-4 rounded-2xl border-0 p-5 break-words whitespace-normal shadow-lg outline-none [transition:opacity_.2s_var(--ease-enter),scale_.2s_var(--ease-enter)] starting:scale-[.98] starting:opacity-0;
+    @apply dark:shadow-[inset_0_0_0_1px_var(--border),var(--shadow-lg)];
+
+    > h4:first-child {
+      @apply mb-0 pr-8 text-xl leading-7 font-semibold;
+
+      &:empty {
+        @apply hidden;
+      }
+
+      em {
+        @apply text-foreground font-semibold not-italic;
+      }
+    }
+
+    /* Content sits on the dialog's own surface, as in ChatGPT's dialogs:
+       cards and tables inside keep their hairline grouping but take no
+       fill of their own (the page canvas showed as a black slab on the
+       dialog's grey). */
+    :is(.cbi-section-node, .cbi-section:has(> .cbi-value), .table),
+    :is(
+      input:not([type="checkbox"], [type="radio"], [readonly]),
+      textarea:not([readonly])
+    ) {
+      @apply bg-transparent;
+    }
+
+    /* Section/map blurbs: the page rules live under #maincontent, which
+       a dialog is not part of. */
+    :is(.cbi-section-descr, .cbi-map-descr):not(:empty) {
+      @apply text-muted-foreground mb-3 text-sm leading-5;
+    }
+
+    h5 {
+      @apply text-foreground my-2 text-sm font-medium;
+    }
+
+    p {
+      @apply text-muted-foreground text-sm leading-5;
+    }
+
+    > ul {
+      @apply border-border overflow-auto rounded-xl border p-3;
+    }
+
+    label.btn {
+      @apply bg-muted text-foreground;
+    }
+
+    pre {
+      @apply overflow-auto;
+      &.errors {
+        @apply bg-danger-surface text-danger-surface-fg border-transparent;
+      }
+    }
+
+    pre + pre {
+      @apply mt-3;
+    }
+
+    /* Modal map (GridSection "Edit…"): the form's own cards sit inside the
+       dialog; the page-level title spacing does not apply. */
+    > .cbi-map {
+      @apply m-0;
+
+      > h2:first-child {
+        @apply hidden;
+      }
+    }
+
+    .button-row,
+    div.left,
+    div.right {
+      @apply flex shrink-0 flex-wrap items-center gap-2 p-0;
+    }
+
+    div.left {
+      @apply justify-start;
+    }
+    div.right {
+      @apply justify-end;
+    }
+
+    /* Dismiss left, actions right — ui.js leaves the first button first. */
+    .button-row {
+      @apply justify-end;
+
+      > :first-child {
+        @apply mr-auto;
+      }
+    }
+
+    &.uci-dialog {
+      ins,
+      del,
+      var {
+        @apply font-mono not-italic no-underline;
+      }
+
+      ins {
+        @apply bg-success-surface text-success-surface-fg rounded-md;
+      }
+      del {
+        @apply bg-danger-surface text-danger-surface-fg rounded-md;
+      }
+      var {
+        @apply bg-info-surface text-info-surface-fg rounded-md;
+      }
+
+      > .cbi-section {
+        @apply m-0 flex flex-col gap-3;
+      }
+
+      .uci-change-legend {
+        @apply grid grid-cols-2 gap-2 max-sm:grid-cols-1;
+
+        .uci-change-legend-label {
+          @apply text-muted-foreground flex items-center gap-2 text-sm;
+
+          ins,
+          del,
+          var {
+            @apply flex h-5 min-w-5 items-center justify-center rounded-md px-1.5 text-xs;
+          }
+        }
+      }
+
+      .uci-change-list {
+        @apply border-border max-h-[50vh] space-y-1.5 overflow-y-auto rounded-xl border p-3;
+
+        h5 {
+          @apply text-muted-foreground mt-3 mb-1 text-xs font-medium first:mt-0;
+        }
+
+        ins,
+        del {
+          @apply block rounded-lg px-2.5 py-1.5 text-[13px] leading-5;
+          strong {
+            @apply font-semibold;
+          }
+        }
+
+        var {
+          @apply inline-block rounded-lg px-1.5 py-0.5 text-[13px];
+          ins,
+          del {
+            @apply ml-1 inline-block px-1 py-px text-xs;
+          }
+        }
+      }
+    }
+
+    /* Status modal ("Applying configuration changes…"): the dialog itself
+       carries .alert-message + a status token. */
+    &.alert-message {
+      @apply bg-dialog-bg text-foreground border-0 p-5;
+
+      p {
+        @apply text-foreground;
+      }
+
+      &.spinning {
+        @apply pl-12! before:left-5;
+      }
+    }
+  }
+}

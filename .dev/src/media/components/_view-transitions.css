@@ -1,0 +1,6 @@
+/* No view transitions: swapped and freshly loaded content fades in instead
+   (_utilities.css). A captured page would crossfade two layouts on top of
+   that fade, and a cross-document one would only fade to the spinner. */
+:root {
+  view-transition-name: none;
+}

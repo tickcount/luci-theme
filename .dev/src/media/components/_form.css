@@ -1,0 +1,338 @@
+.cbi-input-invalid,
+.cbi-value-error {
+  @apply !border-destructive focus:!ring-destructive-a20;
+}
+
+/* ── Option rows ─────────────────────────────────────────────────────
+   ChatGPT settings row: label (14/20 medium) with its description under it
+   (12/16 secondary) on the left, the control on the right, 12/16px padding,
+   rows split by a hairline inset 16px from the card edges.
+
+   LuCI nests the description inside .cbi-value-field after the widget, so
+   the field is dissolved (display: contents) into the row's grid: the
+   widget takes the right column across both rows, the description drops
+   under the title. Extra field children stack in the right column.
+   Overflow stays visible everywhere — dropdown lists are absolutely
+   positioned and measure their scroll parent. */
+.cbi-value {
+  /* Rows 1fr / title / description / 1fr: the widget spans all four, so
+     the label block stays vertically centred on the control whatever its
+     height. The label keeps at least 40% of the row: a wide control (a
+     select plus "- Current power: 20 dBm") otherwise squeezed the title
+     into a one-word column; the control column may shrink below its
+     max-content so a long select ellipsizes instead of leaving the card. */
+  @apply relative grid grid-cols-[minmax(40%,1fr)_minmax(0,auto)] grid-rows-[1fr_auto_auto_1fr] items-center gap-x-6 px-4 py-3;
+
+  &.hidden {
+    @apply hidden;
+  }
+
+  > .cbi-value-title {
+    @apply text-foreground col-start-1 row-start-2 text-sm leading-5 font-medium;
+  }
+
+  > .cbi-value-field {
+    @apply contents;
+
+    > * {
+      @apply col-start-2 max-w-full justify-self-end;
+    }
+
+    > :first-child:not(.cbi-value-description) {
+      @apply row-span-4 row-start-1;
+    }
+
+    > .cbi-value-description {
+      @apply text-muted-foreground col-start-1 row-start-3 mt-0.5 justify-self-start text-xs leading-4 break-words;
+
+      &:empty {
+        @apply hidden;
+      }
+    }
+  }
+
+  /* Wide widgets and title-less rows take the whole row, ChatGPT's stacked
+     row: title, control, then description, all left-aligned. */
+  &:not(:has(> .cbi-value-title)),
+  &:has(
+    > .cbi-value-field
+      :is(
+        textarea,
+        .cbi-dynlist,
+        .cbi-filebrowser,
+        .cbi-section,
+        .cbi-tblsection,
+        .cbi-range-slider
+      )
+  ),
+  &:has(> .cbi-value-field > div > span.cbi-checkbox ~ span.cbi-checkbox),
+  &:has(> .cbi-value-field > div > label > select),
+  &:has(
+    > .cbi-value-field > div > span.cbi-radio ~ span.cbi-radio ~ span.cbi-radio
+  ),
+  &:has(> .cbi-section, > .cbi-tblsection) {
+    @apply grid-cols-1 grid-rows-none gap-y-2;
+
+    > .cbi-value-title {
+      @apply row-auto;
+    }
+
+    > .cbi-value-field > *,
+    > .cbi-value-field > :first-child:not(.cbi-value-description),
+    > .cbi-value-field > .cbi-value-description {
+      @apply col-start-1 row-auto justify-self-stretch;
+    }
+
+    > .cbi-value-field > .cbi-value-description {
+      @apply -mt-1;
+    }
+  }
+
+  > .cbi-section,
+  > .cbi-tblsection {
+    @apply w-full;
+  }
+
+  /* Phones: ChatGPT's settings rows wrap the control under the label once
+     the row container gets narrow. Switches stay inline. */
+  @media (width < 40rem) {
+    &:not(
+      :has(
+        > .cbi-value-field > div.cbi-checkbox,
+        > .cbi-value-field > div > div.cbi-checkbox
+      )
+    ) {
+      @apply grid-cols-1 grid-rows-none gap-y-2;
+
+      > .cbi-value-title {
+        @apply row-auto;
+      }
+
+      > .cbi-value-field > *,
+      > .cbi-value-field > :first-child:not(.cbi-value-description),
+      > .cbi-value-field > .cbi-value-description {
+        @apply col-start-1 row-auto justify-self-stretch;
+      }
+
+      > .cbi-value-field > .cbi-value-description {
+        @apply -mt-1;
+      }
+
+      :is(
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        input[type="email"],
+        select,
+        .cbi-input-text,
+        .cbi-dropdown:not(.btn):not(.cbi-button)
+      ) {
+        @apply w-full max-w-full;
+      }
+    }
+  }
+}
+
+/* Row dividers: every visible row after the first visible one draws a
+   hairline at its top edge, inset 16px like ChatGPT's ::after rules. */
+.cbi-value:not(.hidden) ~ .cbi-value:not(.hidden) {
+  @apply before:bg-border before:pointer-events-none before:absolute before:inset-x-4 before:top-0 before:h-px;
+}
+
+.cbi-value-field {
+  &:has(> .cbi-dropdown[disabled]) {
+    @apply cursor-not-allowed;
+  }
+}
+
+/* Password field + reveal toggle (form.Value with password=true). */
+.cbi-value-field > div:has(> input.cbi-input-password),
+div:has(> input.cbi-input-password + .cbi-button) {
+  @apply inline-flex items-center gap-1.5;
+}
+
+/* ── Dynamic list ────────────────────────────────────────────────────
+   ChatGPT token rows: pill-free 36px items on the soft fill. The "×" stays
+   an ::after at the item's right edge — ui.js hit-tests clicks against its
+   width there to remove an entry. */
+.cbi-dynlist {
+  @apply inline-flex w-full max-w-[480px] flex-col items-stretch gap-1.5;
+
+  .item {
+    @apply bg-muted text-foreground pointer-events-auto relative flex min-h-9 cursor-move flex-col items-start justify-center gap-0.5 overflow-hidden rounded-lg py-1.5 pr-9 pl-3 text-sm break-all select-text [transition:scale_.15s,opacity_.15s,background-color_.15s];
+
+    &:hover {
+      @apply bg-soft-hover;
+    }
+
+    &::after {
+      content: "×";
+      @apply text-muted-foreground hover:text-foreground absolute top-1/2 right-1.5 inline-flex size-6 shrink-0 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-base leading-none;
+    }
+
+    &.dragging {
+      @apply scale-[.98] cursor-grabbing opacity-50;
+    }
+    &.drag-over {
+      @apply ring-ring bg-accent-a10 ring-2;
+    }
+
+    > span,
+    > code {
+      @apply pointer-events-none w-full rounded bg-transparent p-0 font-mono text-[13px] leading-5;
+    }
+  }
+
+  .placeholder {
+    @apply break-all;
+  }
+
+  .add-item {
+    @apply flex items-center gap-1.5;
+
+    > input,
+    > .cbi-dropdown {
+      @apply min-w-0 flex-1;
+    }
+
+    /* The "+" is an icon button, not the page's primary action; a labelled
+       action in the same slot (SSH-Keys' "Add key") stays a soft pill. */
+    > .cbi-button {
+      @apply bg-muted text-foreground hover:bg-soft-hover h-9 shrink-0 rounded-full border-transparent;
+    }
+
+    > .cbi-button-add {
+      @apply size-9 p-0 text-base;
+    }
+  }
+}
+
+/* ── Range slider ─────────────────────────────────────────────────
+   ChatGPT slider: 4px track on the 10% ink tint, a 16px white thumb with a
+   hairline and soft shadow; the value reads in secondary ink beside it. */
+.cbi-range-slider {
+  @apply inline-flex flex-wrap items-center gap-x-3 gap-y-1;
+
+  input[type="range"] {
+    @apply h-4 w-56 max-w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none;
+
+    &::-webkit-slider-runnable-track {
+      @apply bg-foreground-a10 h-1 rounded-full;
+    }
+    &::-moz-range-track {
+      @apply bg-foreground-a10 h-1 rounded-full;
+    }
+    &::-moz-range-progress {
+      @apply bg-foreground h-1 rounded-full;
+    }
+    &::-webkit-slider-thumb {
+      @apply border-border -mt-1.5 size-4 appearance-none rounded-full border bg-white shadow-md;
+    }
+    &::-moz-range-thumb {
+      @apply border-border size-4 rounded-full border bg-white shadow-md;
+    }
+    &:focus-visible::-webkit-slider-thumb {
+      @apply ring-ring ring-2;
+    }
+  }
+
+  output {
+    @apply text-muted-foreground min-w-8 text-sm tabular-nums;
+  }
+
+  br {
+    @apply hidden;
+  }
+}
+
+/* ── File browser (ui.FileUpload / DirectoryPicker) ─────────────────
+   Closed it takes no space (ui.js toggles .open; the trigger button hides
+   itself while open); open it is a ChatGPT list card: breadcrumb, 36px
+   rows with hover fill, actions on the right. */
+.cbi-filebrowser {
+  @apply h-0 overflow-hidden opacity-0;
+
+  &.open {
+    @apply border-border bg-panel-bg h-auto w-full max-w-2xl overflow-visible rounded-2xl border p-3 opacity-100;
+  }
+
+  > p {
+    @apply text-muted-foreground mb-2 px-1 text-sm;
+  }
+
+  ul {
+    @apply m-0 max-h-80 list-none overflow-y-auto p-0;
+  }
+
+  li {
+    @apply hover:bg-sidebar-accent flex min-h-9 items-center gap-3 rounded-xl px-2 py-1 text-sm;
+
+    > .name {
+      @apply flex min-w-0 flex-[10] items-center gap-2 truncate;
+
+      a {
+        @apply text-foreground;
+      }
+    }
+
+    > .mtime {
+      @apply text-muted-foreground shrink-0 text-xs tabular-nums;
+    }
+
+    > div:last-child {
+      @apply flex flex-[3] justify-end gap-1;
+    }
+  }
+
+  > ul > em {
+    @apply text-muted-foreground block px-2 py-3 text-sm;
+  }
+
+  > .right {
+    @apply mt-3 flex flex-wrap items-center justify-end gap-2;
+
+    > .upload {
+      @apply flex-wrap items-center gap-2;
+    }
+  }
+}
+
+button.open-file-browser img {
+  @apply size-4;
+}
+
+/* Composite pickers built from captioned selects (Wireless › Operating
+   frequency: Mode / Band / Channel / Width as float:left <label>s): a
+   wrapping row of selector pills, each under a 12px secondary caption. The
+   inline float/margins need the !; hidden labels (Band on single-band
+   radios) keep their inline display:none. */
+.cbi-value-field > div:has(> label > select) {
+  @apply flex flex-wrap items-end gap-x-3 gap-y-2;
+
+  > label {
+    @apply text-muted-foreground float-none! m-0! inline-flex flex-col gap-1 text-xs leading-4;
+
+    > select {
+      @apply min-w-36;
+    }
+
+    > br {
+      @apply hidden;
+    }
+  }
+
+  > br {
+    @apply hidden;
+  }
+}
+
+/* A select followed by a live reading (Wireless › Maximum transmit power:
+   "- Current power: 20 dBm"): the reading becomes a 12px secondary caption
+   under the pill instead of wrapping beside it. */
+.cbi-value-field > div:has(> select + span) {
+  @apply flex flex-col items-end gap-1 max-sm:items-start;
+
+  > select + span {
+    @apply text-muted-foreground text-xs leading-4;
+  }
+}

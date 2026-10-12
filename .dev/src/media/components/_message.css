@@ -1,0 +1,49 @@
+/* ChatGPT callout (Security › "Advanced account security enabled"): a filled
+   16px-cornered card, 16px gutter, 12px gap, 14/20 copy with a medium
+   title; status variants sit on their tinted surfaces in matching ink. */
+.alert-message {
+  @apply bg-callout text-foreground mb-4 gap-3 rounded-2xl border border-transparent px-4 py-3 text-sm leading-5;
+
+  &.success {
+    @apply bg-success-surface text-success-surface-fg border-success-a15;
+  }
+  &.info {
+    @apply bg-info-surface text-info-surface-fg border-info-a15;
+  }
+  &.warning,
+  &.notice {
+    @apply bg-warning-surface text-warning-surface-fg border-warning-a15;
+  }
+  &.error,
+  &.danger {
+    @apply bg-danger-surface text-danger-surface-fg border-destructive-a15;
+  }
+
+  h4,
+  h5,
+  pre,
+  ul,
+  li,
+  p {
+    @apply border-0 bg-transparent text-inherit;
+  }
+
+  h4 {
+    @apply mb-1 text-sm leading-5 font-semibold;
+  }
+  p {
+    @apply text-sm leading-5;
+  }
+  pre {
+    @apply px-0 py-1;
+  }
+
+  .right {
+    @apply mt-3;
+  }
+
+  /* ui.addNotification's Dismiss sits bottom-right in its own column. */
+  > div > .btn:only-child {
+    @apply bg-foreground-a5 hover:bg-foreground-a10 text-current;
+  }
+}

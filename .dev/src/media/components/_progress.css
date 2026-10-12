@@ -1,0 +1,55 @@
+/* ChatGPT usage meter (Settings › Usage › "Weekly limit"): a 12/16 meta line
+   in secondary ink, 5px above a 6px fully rounded track on a 10% ink tint,
+   filled in solid ink. LuCI keeps the figure in the title attribute and
+   writes the fill width inline on the first child, so the meta line is the
+   ::before (top), the track the ::after (bottom), and the fill rides on
+   the track. */
+.cbi-progressbar {
+  @apply relative block h-[27px] w-full min-w-40 cursor-help bg-transparent;
+  @apply before:text-muted-foreground before:absolute before:inset-x-0 before:top-0 before:truncate before:text-xs before:leading-4 before:tabular-nums before:content-[attr(title)];
+  @apply after:bg-foreground-a10 after:absolute after:inset-x-0 after:bottom-0 after:h-1.5 after:rounded-full after:content-[''];
+
+  > div {
+    @apply bg-foreground absolute bottom-0 left-0 z-[1] h-1.5 max-w-full min-w-1.5 rounded-full [transition:width_.3s_var(--ease-out)];
+  }
+
+  /* A title-less bar (package manager's spacer) is just the track. */
+  &:not([title]),
+  &[title=""] {
+    @apply h-1.5;
+  }
+}
+
+/* Meter tables (Overview › Memory / Storage: label cell + meter cell per
+   row) read as ChatGPT's usage rows: the label on its own line (14/20
+   medium), the meter's meta line and track below it, full width. */
+.table:has(
+  > .tr > .td > .cbi-progressbar,
+  > tbody > .tr > .td > .cbi-progressbar
+) {
+  @apply md:block;
+
+  > tbody {
+    @apply md:block;
+  }
+
+  .tr {
+    @apply md:flex md:flex-col md:gap-1 md:px-4 md:py-3;
+
+    &:not(:last-child) {
+      @apply md:border-border md:border-b;
+    }
+
+    &:hover > .td {
+      @apply md:bg-transparent;
+    }
+  }
+
+  .td {
+    @apply md:block md:w-auto! md:border-0 md:p-0!;
+
+    &:first-child {
+      @apply text-foreground font-medium;
+    }
+  }
+}

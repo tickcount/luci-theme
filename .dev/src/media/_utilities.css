@@ -1,0 +1,78 @@
+.hidden {
+  @apply hidden!;
+}
+
+.left {
+  @apply text-left!;
+  &:is(td) {
+    @apply md:text-left!;
+  }
+}
+
+.right {
+  @apply text-right!;
+  &:is(td) {
+    @apply md:text-right!;
+  }
+}
+
+.center {
+  @apply text-center!;
+  &:is(td) {
+    @apply md:text-center!;
+  }
+}
+
+.top {
+  @apply align-top!;
+  &:is(td) {
+    @apply md:align-top!;
+  }
+}
+
+.bottom {
+  @apply align-bottom!;
+  &:is(td) {
+    @apply md:align-bottom!;
+  }
+}
+
+.middle {
+  @apply align-middle!;
+  &:is(td) {
+    @apply md:align-middle!;
+  }
+}
+
+.nowrap:not(span) {
+  @apply whitespace-nowrap;
+}
+
+@keyframes outline-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Also content that lands after first paint: the view's top-level blocks
+   (full load and router swap; poll never re-inserts them) and a switched-in
+   form tab pane (the dashboard's polled tabs sit under .Dashboard). */
+.fade-in,
+#view > :not(.spinning),
+#view > .cbi-map > .cbi-map-tabbed > [data-tab-active="true"],
+.cbi-section-node-tabbed > [data-tab-active="true"] {
+  @apply animate-[outline-fade-in_250ms_ease_backwards];
+}
+
+.fade-out {
+  @apply pointer-events-none opacity-0 [transition:opacity_.4s];
+}
+
+.spinning {
+  @apply relative pl-7!;
+  @apply before:absolute before:top-1/2 before:left-1.5 before:size-4 before:-translate-y-1/2 before:animate-spin before:bg-current before:mask-[var(--icon-loader-2)] before:mask-cover before:mask-center before:mask-no-repeat;
+
+  #view > &:first-child {
+    @apply mx-auto grid min-h-48 w-fit place-items-center;
+  }
+}

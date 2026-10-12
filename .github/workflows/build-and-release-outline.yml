@@ -11,19 +11,60 @@ permissions:
 
 jobs:
   build:
-    name: build luci-theme-outline ${{ matrix.pkg_type }}
+    name: build luci-theme-outline ${{ matrix.sdk }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        pkg_type: [ipk, apk]
+        # 24.10 builds an .ipk, 25.12 an .apk.
+        sdk: ["24.10.4", "25.12.5"]
     steps:
-      - uses: eamonxg/build-luci-package@master
+      # luci.mk names the package after its directory, so the repo goes into
+      # feed/luci-theme-outline and feed/ becomes the "outline" feed.
+      - uses: actions/checkout@v6
         with:
-          package: luci-theme-outline
-          pkg_type: ${{ matrix.pkg_type }}
-          prep_script: |
-            ./scripts/feeds update -f base luci
-            ./scripts/feeds install -p luci-base
-          artifact_paths: |
-            bin/packages/$ARCH/base/*luci-theme-outline*.[ai]pk
-          release_body_path: .dev/docs/changelog/${{ github.ref_name }}.md
+          path: feed/luci-theme-outline
+
+      - name: Build in the official OpenWrt SDK
+        uses: openwrt/gh-action-sdk@v11
+        env:
+          ARCH: x86_64-${{ matrix.sdk }}
+          FEED_DIR: ${{ github.workspace }}/feed
+          FEEDNAME: outline
+          PACKAGES: luci-theme-outline
+          NO_REFRESH_CHECK: 1
+          NO_SHFMT_CHECK: 1
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: luci-theme-outline-${{ matrix.sdk }}
+          path: bin/packages/*/outline/*.[ai]pk
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_type == 'tag'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+      # Body: .dev/docs/changelog/<tag>.md when it exists, empty otherwise.
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          notes=".dev/docs/changelog/${TAG}.md"
+          [ -f "$notes" ] || { notes="$RUNNER_TEMP/empty.md"; : > "$notes"; }
+          # Artifacts keep their bin/packages/<arch>/outline/ layout.
+          mapfile -t files < <(find dist -type f \( -name '*.ipk' -o -name '*.apk' \))
+          [ "${#files[@]}" -gt 0 ] || { echo "no packages to release" >&2; exit 1; }
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" --title "luci-theme-outline-$TAG" --notes-file "$notes"
+          fi

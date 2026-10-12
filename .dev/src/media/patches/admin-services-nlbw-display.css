@@ -1,0 +1,84 @@
+/*
+  PATCH: admin-services-nlbw-display (luci-app-nlbwmon › Display)
+  Loaded on-demand by header.ut only when data-page matches this filename.
+  Native declarations keep this standalone patch free of Tailwind helper output.
+
+  The totals beside the pie charts (.kpi > ul > li: <big>value</big> label)
+  read as ChatGPT's usage legend (Settings › Usage › Analytics): a 3px
+  marker, the value at 18/24 medium in ink, the label 12/16 secondary.
+  nlbw writes display:list-item inline on each li, hence !important.
+*/
+.kpi ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kpi li {
+  display: flex !important;
+  flex-direction: column;
+  padding-left: 10px;
+  border-left: 3px solid var(--input);
+  border-radius: 2px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.kpi li big {
+  color: var(--foreground);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 24px;
+  text-wrap: balance;
+}
+
+/* The protocol tabs put names, not numbers, in the totals ("HTTPS, HTTP
+   and Apple Push Service"): give the legend the row's remaining width so
+   they wrap in balanced lines instead of a one-word column. */
+.kpi {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+/* Chart.js tooltip (nlbw's #chartjs-tooltip) as ChatGPT's ink bubble. */
+#chartjs-tooltip {
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  background: var(--tooltip-bg) !important;
+  color: var(--tooltip-fg) !important;
+  font-size: 12px;
+  line-height: 16px;
+  box-shadow: var(--shadow-lg);
+}
+
+#chartjs-tooltip.above::before {
+  border-color: var(--tooltip-bg) transparent !important;
+}
+
+/* Hovering a segment tints its table row with an inline hsl() wash; use the
+   table's hover fill instead. */
+.table .tr[style*="background-color"] {
+  background-color: var(--sidebar-accent) !important;
+}
+
+/* Chart titles above the doughnuts: ChatGPT's small section heading. */
+/* Title over its ring: nlbw centres the label across the block but leaves
+   the 200px canvas at the left edge — stack and centre both. */
+.pie {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pie > label {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}

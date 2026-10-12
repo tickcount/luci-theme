@@ -1,0 +1,548 @@
+/* ── Sidebar ────────────────────────────────────────────────────────
+   ChatGPT's sidebar (chatgpt.com): a 52px icon rail beside a 238px panel,
+   both on the shell canvas, a hairline between rail and panel. The rail
+   holds home (the logo), one 36px button per top-level LuCI section and
+   logout at the foot; the panel holds the title row (hostname, search,
+   collapse) and the sections as labelled groups of 36px rows. Collapsed,
+   only the rail stays. */
+
+#sidebar {
+  /* Mobile drawer: translate only; `transition-all` would also ease
+     background-color and lag the sidebar behind the content on theme flips. */
+  /* overflow-visible on desktop: the rail's tooltips sit outside it. */
+  @apply bg-sidebar-bg text-sidebar-fg flex h-full w-[290px] shrink-0 flex-row overflow-hidden md:overflow-visible;
+  @apply max-md:fixed max-md:top-0 max-md:left-0 max-md:z-40 max-md:w-[min(290px,calc(100vw-48px))] max-md:-translate-x-full max-md:[transition:translate_.3s_var(--ease-enter)];
+  /* Drawer height tracks the dynamic viewport so its bottom edge meets the
+     Safari toolbar smoothly instead of jumping when the toolbar shows/hides. */
+  @apply max-md:h-dvh;
+
+  &[data-drawer-open="true"] {
+    @apply max-md:translate-x-0 max-md:shadow-xl;
+  }
+
+  .icon-expand {
+    @apply hidden;
+  }
+}
+
+html[data-sidebar-collapsed="true"] #sidebar {
+  @apply md:w-[52px];
+
+  .sidebar-panel {
+    @apply md:hidden;
+  }
+
+  .sidebar-rail {
+    @apply md:border-r-0;
+  }
+
+  /* The logo becomes the expand control on hover. */
+  .sidebar-rail-home:hover {
+    .sidebar-logo {
+      @apply md:hidden;
+    }
+    .sidebar-rail-expand {
+      @apply md:flex;
+    }
+  }
+}
+
+/* ── Rail ─────────────────────────────────────────────────────────── */
+
+.sidebar-rail {
+  @apply flex w-[52px] shrink-0 flex-col items-center gap-4 border-r-[0.5px] border-r-(--border) pt-2 pb-2;
+  @apply pb-[max(0.5rem,env(safe-area-inset-bottom))];
+}
+
+.sidebar-rail-home,
+.sidebar-rail-item,
+.sidebar-footer .sidebar-logout {
+  @apply text-text-tertiary flex size-9 shrink-0 items-center justify-center rounded-[10px] no-underline [transition:background-color_.15s] hover:no-underline;
+
+  &:hover {
+    @apply bg-sidebar-accent;
+  }
+
+  &:focus-visible {
+    @apply outline-ring outline-2 -outline-offset-2;
+  }
+
+  img {
+    @apply size-5;
+  }
+}
+
+.sidebar-rail-home {
+  .sidebar-rail-expand {
+    @apply hidden items-center justify-center;
+  }
+}
+
+#sidebar .sidebar-logo {
+  @apply size-5 opacity-100;
+}
+
+.sidebar-rail-sep {
+  @apply bg-border -my-1 h-px w-6 shrink-0;
+}
+
+.sidebar-rail-nav {
+  @apply flex flex-col items-center gap-4;
+}
+
+/* Inactive rail icons sit in tertiary ink; the current section's in full
+   ink (img icons: opacity stands in for the ink tier). */
+#sidebar .sidebar-rail-item img.outline-icon,
+#sidebar .sidebar-footer img.outline-icon {
+  @apply opacity-50;
+}
+
+#sidebar .sidebar-rail-item.is-shown img.outline-icon,
+#sidebar .sidebar-rail-item:hover img.outline-icon,
+#sidebar .sidebar-footer a:hover img.outline-icon {
+  @apply opacity-100;
+}
+
+.sidebar-footer {
+  @apply mt-auto flex flex-col items-center;
+
+  .sidebar-label {
+    @apply sr-only;
+  }
+
+  .sidebar-icon {
+    @apply flex items-center justify-center;
+  }
+}
+
+/* ── Icon tooltips ──────────────────────────────────────────────────
+   ChatGPT labels its icon-only controls with an ink bubble: to the right of
+   rail buttons, under the panel's title-row buttons. The label is the
+   button's aria-label; hover-capable pointers only, after a short delay. */
+@media (hover: hover) {
+  .sidebar-rail-home,
+  .sidebar-rail-item,
+  .sidebar-footer .sidebar-logout,
+  .sidebar-icon-btn {
+    @apply relative;
+
+    &::after {
+      content: attr(aria-label);
+      @apply bg-tooltip-bg text-tooltip-fg pointer-events-none invisible absolute z-[60] w-max max-w-60 rounded-lg px-2.5 py-1.5 text-xs leading-4 font-medium whitespace-nowrap opacity-0 shadow-lg [transition:opacity_.12s,visibility_.12s];
+    }
+
+    &:hover::after {
+      @apply visible opacity-100 delay-300;
+    }
+  }
+
+  .sidebar-rail-home,
+  .sidebar-rail-item,
+  .sidebar-footer .sidebar-logout {
+    &::after {
+      @apply top-1/2 left-[calc(100%+8px)] -translate-y-1/2;
+    }
+  }
+
+  .sidebar-icon-btn::after {
+    @apply top-[calc(100%+6px)] left-1/2 -translate-x-1/2;
+  }
+
+  /* Collapsed, a section's rail button opens its page list instead. */
+  html[data-sidebar-collapsed="true"] .sidebar-rail-item::after {
+    @apply md:hidden;
+  }
+}
+
+/* ── Panel ────────────────────────────────────────────────────────── */
+
+.sidebar-panel {
+  @apply flex min-w-0 flex-1 flex-col overflow-hidden;
+}
+
+.sidebar-header {
+  @apply mt-2 flex h-9 shrink-0 items-center gap-0 pr-1.5 pl-4;
+}
+
+.sidebar-brand {
+  @apply text-nav-text flex min-w-0 flex-1 items-center no-underline hover:no-underline;
+}
+
+.sidebar-brand-text {
+  /* ChatGPT's "ChatGPT" title: 17/24 semibold at 85% ink. */
+  @apply truncate text-[17px] leading-6 font-semibold;
+}
+
+.sidebar-icon-btn,
+button.cmdk-trigger {
+  @apply text-text-tertiary flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent p-0 [transition:background-color_.15s];
+
+  &:hover {
+    @apply bg-sidebar-accent;
+  }
+
+  img {
+    @apply size-5;
+  }
+}
+
+/* Header icons in tertiary ink. */
+#sidebar .sidebar-header img.outline-icon {
+  @apply opacity-50;
+}
+#sidebar .sidebar-header button:hover img.outline-icon {
+  @apply opacity-100;
+}
+
+/* ── Panel nav ────────────────────────────────────────────────────── */
+
+.sidebar-nav {
+  @apply relative flex flex-1 flex-col overflow-x-hidden overflow-y-auto px-1.5 pt-2 pb-4;
+}
+
+/* A leaf section (no pages) is ChatGPT's "New chat" row: icon + label. */
+a.sidebar-nav-parent {
+  @apply text-nav-text flex h-9 w-full shrink-0 items-center gap-2 rounded-lg px-2.5 text-sm leading-5 font-normal no-underline [transition:background-color_.15s];
+
+  &:hover {
+    @apply bg-sidebar-accent no-underline;
+  }
+
+  .sidebar-icon {
+    @apply flex size-5 shrink-0 items-center justify-center;
+    img {
+      @apply size-5;
+    }
+  }
+
+  .sidebar-label {
+    @apply min-w-0 flex-1 truncate;
+  }
+}
+
+.sidebar-nav-item.active > .sidebar-nav-parent {
+  @apply bg-sidebar-active-bg;
+}
+
+/* The panel lists one section at a time — the one picked on the rail
+   (menu-outline.js / sidebar-outline.js mark it .is-shown). */
+.sidebar-nav > [data-section]:not(.is-shown) {
+  @apply hidden;
+}
+
+/* Group label ("Projects", "Recents"): 14/18 medium tertiary ink, 36px;
+   it names the section shown. */
+.sidebar-group-label {
+  @apply text-text-tertiary mx-1.5 flex h-9 shrink-0 items-center px-1 py-0.5 text-sm leading-[18px] font-medium;
+
+  .sidebar-label {
+    @apply truncate;
+  }
+}
+
+.sidebar-sub-list {
+  @apply m-0 flex list-none flex-col p-0;
+}
+
+.sidebar-sub-item {
+  @apply m-0;
+
+  &.active .sidebar-sub-link {
+    @apply bg-sidebar-active-bg;
+  }
+}
+
+/* Page row (ChatGPT's "Recents" row): 36px, 10px inset, 14/20 at 85% ink,
+   no icon; hover and the current page share the text-tinted fill. */
+.sidebar-sub-link {
+  @apply text-nav-text block h-9 truncate rounded-lg px-2.5 py-2 text-sm leading-5 no-underline [transition:background-color_.15s];
+
+  &:hover {
+    @apply bg-sidebar-accent no-underline;
+  }
+
+  &:focus-visible {
+    @apply outline-ring outline-2 -outline-offset-2;
+  }
+}
+
+/* ── Collapsed hover popover (pages of the hovered rail section) ───── */
+
+.sidebar-collapsed-popover {
+  @apply bg-elevated-secondary-a90 shadow-menu fixed z-50 min-w-48 overflow-hidden rounded-2xl p-1.5 backdrop-blur-sm;
+}
+
+.sidebar-collapsed-popover-title {
+  @apply text-text-tertiary px-2.5 pt-1.5 pb-1 text-sm leading-[18px] font-medium;
+}
+
+.sidebar-collapsed-popover-list {
+  @apply m-0 list-none p-0;
+}
+
+.sidebar-collapsed-popover-link {
+  @apply text-foreground flex h-9 items-center rounded-xl px-2.5 text-sm no-underline [transition:background-color_.15s];
+
+  &:hover {
+    @apply bg-sidebar-accent no-underline;
+  }
+
+  &.active {
+    @apply bg-sidebar-active-bg;
+  }
+}
+
+/* ── Main wrapper ─────────────────────────────────────────────────── */
+
+#main-wrapper {
+  /* h-full (not stretch-derived): body wraps stray third-party children onto
+     a second flex line; the first line must always be exactly viewport-high
+     so those wrapped lines land offscreen. basis-full (not w-full) on mobile:
+     with the sidebar out of flow, a zero flex-basis would leave room for a
+     stray full-width sibling on the same line instead of forcing it to wrap. */
+  @apply flex h-full min-w-0 flex-1 flex-col overflow-hidden max-md:basis-full;
+}
+
+/* ── Content surface ─────────────────────────────────────────────────
+   ChatGPT's main surface: the page canvas with a hairline seam against the
+   sidebar, no frame or shadow. */
+
+.content-card {
+  @apply bg-background flex min-h-0 flex-1 flex-col overflow-hidden border-l-[0.5px] border-l-(--border) max-md:border-l-0;
+}
+
+/* The rail width eases and #main-wrapper (flex-1) follows it frame by frame.
+   data-sidebar-anim is set on the first toggle, so a page load never plays it. */
+html[data-sidebar-anim] #sidebar {
+  @apply md:[transition:width_200ms_var(--ease-out)];
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+
+.card-header {
+  @apply bg-background flex h-13 shrink-0 items-center justify-between gap-2 px-3 md:px-4;
+}
+
+.card-header-left {
+  @apply flex min-w-0 items-center gap-1;
+}
+.card-header-right {
+  @apply flex items-center gap-1;
+}
+
+.topbar-hamburger {
+  @apply text-foreground hidden size-9 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent p-0 [transition:background-color_.15s] max-md:flex;
+
+  &:hover {
+    @apply bg-sidebar-accent;
+  }
+
+  svg,
+  img {
+    @apply size-5;
+  }
+}
+
+.topbar-breadcrumb {
+  @apply flex min-w-0 items-center gap-1 px-1 text-sm leading-5;
+
+  .breadcrumb-item {
+    @apply text-muted-foreground truncate;
+    &.active {
+      @apply text-foreground;
+    }
+  }
+
+  .breadcrumb-sep {
+    @apply text-muted-foreground flex shrink-0 opacity-60;
+    svg,
+    img {
+      @apply size-3.5;
+    }
+  }
+}
+
+button.topbar-icon-btn {
+  @apply text-muted-foreground inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 [transition:color_.15s,background-color_.15s];
+
+  &:hover {
+    @apply bg-sidebar-accent text-foreground;
+  }
+
+  img {
+    @apply size-[18px] shrink-0;
+  }
+}
+
+.topbar-indicators {
+  @apply flex items-center gap-1;
+
+  /* LuCI-owned spans: icon via ::before mask only (no JS / no img) */
+  span[data-indicator] {
+    > img {
+      @apply hidden;
+    }
+    @apply text-muted-foreground relative inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[0px] [transition:color_.15s,background-color_.15s,width_.15s_ease-out,opacity_.15s_ease-out] starting:w-0 starting:opacity-0;
+    @apply before:relative before:block before:size-[18px] before:shrink-0 before:bg-current before:[mask-size:cover] before:[mask-position:center] before:[mask-repeat:no-repeat];
+
+    &:hover {
+      @apply bg-sidebar-accent text-foreground;
+    }
+
+    &[data-indicator="poll-status"] {
+      &[data-style="active"] {
+        @apply before:[mask-image:var(--icon-refresh-cw)];
+      }
+      &[data-style="inactive"] {
+        @apply before:[mask-image:var(--icon-refresh-cw-off)];
+      }
+    }
+
+    &[data-indicator="media_error"] {
+      @apply before:[mask-image:var(--icon-alert-circle)];
+    }
+
+    &[data-indicator="uci-changes"] {
+      @apply text-foreground before:[mask-image:var(--icon-settings)];
+
+      &[data-count]:not([data-count="0"]) {
+        @apply after:bg-accent after:text-on-accent after:absolute after:top-1 after:right-1 after:z-10 after:flex after:h-4 after:min-w-4 after:items-center after:justify-center after:rounded-full after:px-1 after:text-[10px] after:leading-none after:font-semibold after:tabular-nums after:content-[attr(data-count)];
+      }
+    }
+  }
+}
+
+/* ── Maincontent ────────────────────────────────────────────────────
+   ChatGPT's settings column: one fixed measure, centered in the main
+   surface, identical on every page and while a view is still loading — no
+   width jumps between pages or when tables arrive. 920px of content (ChatGPT
+   uses 728px; LuCI's grid sections run to eight-plus columns, which that
+   would force into the stacked mobile layout). */
+
+#maincontent {
+  @apply flex-1 [scrollbar-gutter:stable] overflow-y-auto px-5 pt-2 pb-16 max-md:px-4;
+
+  > * {
+    @apply mx-auto w-full max-w-[920px];
+  }
+
+  /* Page title: LuCI views open with <h2 name="content">; ChatGPT's settings
+     header is 24/28.8 medium in a 60px band. */
+  > #view > h2:first-child,
+  > #view > :is(div, .cbi-map, p) > h2:first-child,
+  > h2:first-child {
+    @apply mt-2 mb-5 border-0 pl-0 text-2xl leading-[1.2] font-medium;
+  }
+
+  h2 {
+    @apply border-0 pl-0;
+  }
+
+  /* A view's own intro paragraph (under the page title) reads as the
+     page description: secondary ink, like ChatGPT's section blurbs. */
+  > #view > p:not(.spinning),
+  > #view > :is(div, .cbi-map) > p:not(.spinning),
+  .cbi-section > p {
+    @apply text-muted-foreground mb-4;
+  }
+
+  .cbi-map-descr {
+    @apply text-muted-foreground -mt-2 mb-6 text-sm leading-5;
+  }
+
+  .cbi-section-descr {
+    @apply text-muted-foreground mb-3 text-sm leading-5;
+
+    &:empty {
+      @apply hidden;
+    }
+  }
+
+  .cbi-page-actions {
+    @apply mt-6 flex flex-wrap items-center justify-end gap-2;
+  }
+
+  .zone-forwards {
+    @apply flex flex-nowrap items-stretch gap-2 leading-relaxed;
+    > span {
+      @apply text-muted-foreground flex shrink-0 basis-8 items-center justify-center self-center;
+    }
+    .zone-src,
+    .zone-dest {
+      @apply flex flex-1 flex-col gap-1.5;
+    }
+
+    /* "REJECT all others" must not break letter by letter in a narrow
+       grid column. */
+    .zone-dest {
+      @apply min-w-28 break-normal;
+    }
+  }
+
+  .controls {
+    @apply flex flex-wrap items-center gap-3;
+    label {
+      input[type="radio"],
+      input[type="checkbox"] {
+        @apply mr-1 align-middle;
+      }
+    }
+  }
+
+  .cbi-title-section {
+    @apply mb-4 leading-relaxed;
+  }
+
+  .control-group {
+    @apply mt-1;
+  }
+
+  .control-group,
+  .cbi-page-actions > div:not(.cbi-dropdown),
+  .cbi-section-actions > div {
+    @apply flex flex-row flex-nowrap items-center gap-2;
+  }
+}
+
+/* ── Mobile sidebar overlay ───────────────────────────────────────── */
+
+#sidebar-overlay {
+  /* Absolute, not fixed: iOS Safari 26 tints its bars from edge-touching
+     fixed elements' background-color, opacity notwithstanding. */
+  @apply bg-scrim pointer-events-none absolute inset-0 z-30 opacity-0 [transition:opacity_.2s] md:hidden;
+
+  &.active {
+    @apply pointer-events-auto opacity-100;
+  }
+}
+
+/* Views that render bare "h5 label / p > button" pairs straight into #view
+   (nlbw › Backup: Restore / Generate Backup) read as ChatGPT's data-control
+   rows: label left, action right, hairlines between rows. */
+#view:has(> h5 + p > .cbi-button) {
+  @apply grid grid-cols-[minmax(0,1fr)_auto] items-stretch;
+
+  > :not(h5, p:has(> .cbi-button)) {
+    @apply col-span-2;
+  }
+
+  > h5 {
+    @apply border-border text-foreground m-0 flex items-center border-b py-3 text-sm leading-5 font-normal;
+  }
+
+  > h5 + p:has(> .cbi-button) {
+    @apply border-border m-0 flex h-full items-center justify-end border-b py-3;
+  }
+}
+
+/* Views that build their intro as nested paragraphs with the action right
+   after (Attended Sysupgrade: <p><h2/><p>…</p><p>…</p><button/></p>): the
+   lines read as the secondary page blurb and the action gets the card
+   rhythm's 12px of air instead of touching the last line. */
+#view p > p {
+  @apply text-muted-foreground m-0;
+}
+
+#view p + :is(button, .btn, .cbi-button) {
+  @apply mt-3;
+}

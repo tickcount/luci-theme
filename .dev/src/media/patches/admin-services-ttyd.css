@@ -1,0 +1,16 @@
+/*
+  PATCH: admin-services-ttyd (luci-app-ttyd)
+  Loaded on-demand by header.ut only when data-page matches this filename.
+  Native declarations keep this standalone patch free of Tailwind helper output.
+
+  The terminal is ttyd's own page in an iframe (inline 3px corners, no
+  frame). It gets ChatGPT's code-block card: 16px corners, a hairline and
+  the terminal surface behind it, so there is no white flash before xterm
+  paints.
+*/
+[data-page="admin-services-ttyd-ttyd"] #view iframe {
+  display: block;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  background: var(--terminal-bg);
+}

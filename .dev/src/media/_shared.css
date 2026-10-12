@@ -1,0 +1,46 @@
+/**
+ * luci-theme-outline: rules shared by both build entries
+ * Copyright 2025 eamonxg <eamonxiong@gmail.com>
+ * Licensed to the public under the Apache License 2.0.
+ *
+ * main.css and login.css are separate build entries; anything they both need
+ * lives here so it is written once and imported by each.
+ */
+
+html {
+  @apply scheme-light;
+}
+
+html[data-darkmode="true"] {
+  @apply scheme-dark;
+}
+
+/* Lucide icons loaded via <img>: <img>-embedded SVGs render with black strokes
+   and ignore the parent's `color`, so flatten them to a single tone and invert
+   for dark mode (per-context opacity stays in each stylesheet). */
+.card-header img,
+.login-input-icon img,
+.login-pw-toggle img,
+img.outline-icon {
+  filter: brightness(0) saturate(100%);
+}
+
+html[data-darkmode="true"] .card-header img,
+html[data-darkmode="true"] .login-input-icon img,
+html[data-darkmode="true"] .login-pw-toggle img,
+html[data-darkmode="true"] img.outline-icon {
+  filter: brightness(0) saturate(100%) invert(1);
+}
+
+/* Per-context opacity tuning for the flattened <img> icons above. The card
+   header's icons are theme chrome on every admin page, so they stay here;
+   the sidebar's (rail, title row) are tuned in _layout.css. */
+.card-header img,
+img.outline-icon {
+  opacity: 0.65;
+}
+
+.card-header button:hover img,
+#sidebar a.sidebar-nav-parent img.outline-icon {
+  opacity: 1;
+}

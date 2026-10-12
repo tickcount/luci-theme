@@ -1,0 +1,88 @@
+input {
+  @apply disabled:cursor-not-allowed disabled:opacity-40;
+}
+
+/* ChatGPT text field: 36px, 6px corners, 10px inline padding, a stronger
+   hairline than cards and the elevated control fill. Focus trades the
+   hairline for the blue ring. */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="email"],
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+.cbi-input-text,
+.cbi-input {
+  @apply border-input bg-input-bg text-foreground placeholder:text-text-tertiary focus:ring-ring relative h-9 w-60 max-w-full rounded-md border px-2.5 py-0 text-sm leading-5 shadow-none [transition:border-color_.15s,box-shadow_.15s] focus:border-transparent focus:ring-2 focus:outline-none;
+
+  .table.cbi-section-table & {
+    @apply w-full;
+  }
+}
+
+.cbi-input-text {
+  @apply min-w-20;
+}
+
+#localtime {
+  @apply min-w-64;
+}
+
+/* LuCI textareas hold code — keys, crontabs, rulesets, command output —
+   so they set in ChatGPT's code face (Geist Mono 13/20), not the UA's
+   generic monospace. */
+textarea {
+  @apply border-input bg-input-bg text-foreground placeholder:text-text-tertiary focus:ring-ring min-h-24 w-full resize-y rounded-xl border px-3 py-2 font-mono text-[13px] leading-5 [transition:border-color_.15s,box-shadow_.15s] focus:border-transparent focus:ring-2 focus:outline-none;
+
+  &[disabled] {
+    @apply cursor-not-allowed opacity-40;
+  }
+
+  &[style*="font-family"] {
+    @apply font-mono!;
+  }
+}
+
+/* Plain checkbox / radio: 16px, 4px corners (round for radio), ink fill
+   when on. */
+input[type="radio"],
+input[type="checkbox"] {
+  @apply relative mr-2 inline-block size-4 shrink-0 cursor-pointer appearance-none align-middle disabled:cursor-not-allowed;
+  @apply before:border-input before:bg-input-bg before:absolute before:inset-0 before:rounded-[4px] before:border before:[transition:background-color_.15s,border-color_.15s];
+  @apply after:bg-primary-foreground after:absolute after:inset-0 after:[mask-size:cover] after:[mask-position:center] after:[mask-repeat:no-repeat] after:opacity-0 after:[transition:opacity_.15s];
+  @apply checked:before:border-primary checked:before:bg-primary checked:after:opacity-100;
+  @apply focus-visible:before:ring-ring focus-visible:outline-none focus-visible:before:ring-2;
+}
+
+input[type="radio"] {
+  @apply before:rounded-full;
+  @apply after:[mask-image:var(--icon-radio-dot)];
+}
+
+input[type="checkbox"] {
+  @apply after:[mask-image:var(--icon-check)];
+}
+
+.cbi-checkbox {
+  @apply relative inline-flex items-center align-middle;
+}
+
+/* A LuCI flag (ui.Checkbox: div.cbi-checkbox > input + label) is a ChatGPT
+   switch: 32×20 track, text/10 when off, blue when on, a 16px white thumb
+   that slides 2px → 14px. The multi-choice list variant
+   (span.cbi-checkbox) keeps the plain box above. */
+div.cbi-checkbox > input[type="checkbox"] {
+  @apply m-0 h-5 w-8 rounded-full;
+  @apply before:bg-switch-off before:rounded-full before:border-0 before:[transition:background-color_.15s_var(--ease-out)];
+  @apply after:bg-on-accent after:inset-auto after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:[mask-image:none] after:opacity-100 after:shadow-sm after:[transition:translate_.15s_var(--ease-out)];
+  @apply checked:before:bg-accent checked:after:translate-x-3;
+  @apply disabled:opacity-60;
+
+  + label {
+    @apply hidden;
+  }
+}

@@ -1,0 +1,24 @@
+/*
+  PATCH: admin-status-vnstat2-graphs (luci-app-vnstat2)
+  Loaded on-demand by header.ut only when data-page matches this filename.
+  Native declarations keep this standalone patch free of Tailwind helper output.
+
+  vnstati renders each graph as a white PNG with an inline 5px/10px margin.
+  Each one sits in ChatGPT's chart card (16px corners, hairline, stacked
+  with the card rhythm); on the dark theme the bitmap is inverted with a
+  half-turn hue rotation, so its white canvas reads as the dark surface
+  while rx green / tx grey keep their hues.
+*/
+[data-page="admin-status-vnstat2-graphs"] img[data-iface] {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 0 16px !important;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+[data-page="admin-status-vnstat2-graphs"]
+  img[data-iface]:where([data-darkmode="true"], [data-darkmode="true"] *) {
+  filter: invert(0.92) hue-rotate(180deg);
+}

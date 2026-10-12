@@ -1,0 +1,59 @@
+.cbi-tooltip {
+  /* ChatGPT tooltip: ink bubble (#0d0d0d / #131313), 12/16 copy, 8px
+     corners. Hidden bubbles park off-screen (`left:-10000px`): a
+     visibility-hidden absolute box left at its anchor still counts into the
+     page's scrollable overflow, so the horizontal scrollbar would survive the
+     bubble's disappearance and the page could never snap back. `:hover`
+     returns it via `inset-s-auto`; the transition list must stay explicit —
+     `transition-all` would animate the inset and make the bubble fly in from
+     off-screen. `w-max` sizes the bubble by its content instead of the narrow
+     anchor's containing block (which squeezed it to one word per line). */
+  @apply bg-tooltip-bg text-tooltip-fg absolute inset-s-[-10000px] z-[70] w-max max-w-xs scale-95 rounded-lg px-2.5 py-1.5 text-xs leading-4 font-normal break-normal whitespace-normal no-underline opacity-0 shadow-lg [transition:visibility_.15s_var(--ease-out),opacity_.15s_var(--ease-out),scale_.15s_var(--ease-out)];
+  @apply dark:shadow-[inset_0_0_0_1px_var(--border),var(--shadow-lg)];
+
+  &.error {
+    @apply bg-danger-solid text-destructive-fg;
+  }
+  &.success {
+    @apply bg-success-solid text-success-fg;
+  }
+  &.info {
+    @apply bg-accent text-on-accent;
+  }
+  &.notice {
+    @apply bg-warning text-warning-fg;
+  }
+}
+
+/* Validation errors set data-tooltip on the input/dropdown itself; the
+   hover affordance below must not change a form control's box or text. */
+.cbi-tooltip-container,
+[data-tooltip]:not(
+  input,
+  select,
+  textarea,
+  .cbi-dropdown,
+  button,
+  .cbi-button,
+  .btn,
+  li
+) {
+  @apply relative inline-block cursor-help whitespace-nowrap underline decoration-current/40 decoration-dotted underline-offset-2;
+}
+
+.cbi-tooltip-container {
+  .cbi-tooltip {
+    @apply invisible scale-95 opacity-0;
+  }
+
+  &:hover .cbi-tooltip:not(:empty) {
+    @apply visible inset-s-auto scale-100 opacity-100;
+  }
+}
+
+/* Badges and cards that host a tooltip are already visibly interactive
+   chips: no dotted underline (ChatGPT pills never carry one). */
+:is(.zonebadge, .ifacebadge, .ifacebox-head, .label).cbi-tooltip-container,
+.ifacebox-body .cbi-tooltip-container {
+  @apply no-underline;
+}

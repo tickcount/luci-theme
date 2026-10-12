@@ -1,0 +1,182 @@
+/* Only known scroll containers need themed scrollbars. Applying these rules to
+   every descendant makes selector matching scale with the whole LuCI page.
+
+   This list covers the theme's own scroll containers plus LuCI core markup —
+   a third-party app's own scroll container is not styled here. `scrollbar-color`
+   and `scrollbar-width` inherit from `html`, so such a container still picks up
+   the theme's colours wherever those properties are supported; only the 8px
+   `::-webkit-scrollbar` shape is missed. An app that needs the full treatment
+   adds its container to `patches/<page>.css` — see the file-manager patch. */
+:where(
+  html,
+  .sidebar-nav,
+  #maincontent,
+  .cmdk-list,
+  .cbi-dropdown > ul.dropdown,
+  #modal_overlay,
+  #modal_overlay > .modal > ul,
+  #modal_overlay > .modal pre,
+  .cbi-tabmenu,
+  .tabs,
+  textarea
+) {
+  scrollbar-color: var(--foreground-a30) transparent;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--foreground-a30);
+    border-radius: 9999px;
+  }
+}
+
+/* Mask icons, declared once: every utility that masks an icon reads the
+   variable, so each SVG data URI ships a single time instead of once per
+   rule (and again for its -webkit- prefix). */
+:root {
+  --icon-alert-circle: url("@assets/icons/alert-circle.svg");
+  --icon-check: url("@assets/icons/check.svg");
+  --icon-ellipsis: url("@assets/icons/ellipsis.svg");
+  --icon-eye: url("@assets/icons/eye.svg");
+  --icon-chevron-down: url("@assets/icons/chevron-down.svg");
+  --icon-chevron-up: url("@assets/icons/chevron-up.svg");
+  --icon-loader-2: url("@assets/icons/loader-2.svg");
+  --icon-radio-dot: url("@assets/icons/radio-dot.svg");
+  --icon-refresh-cw: url("@assets/icons/refresh-cw.svg");
+  --icon-refresh-cw-off: url("@assets/icons/refresh-cw-off.svg");
+  --icon-search: url("@assets/icons/search.svg");
+  --icon-settings: url("@assets/icons/settings.svg");
+  --icon-x: url("@assets/icons/x.svg");
+}
+
+html {
+  /* ChatGPT body copy: Geist 14/20 on the shell canvas. Kerning/ligatures on,
+     optical sizing left to the variable font. */
+  /* The root keeps the browser's 16px so rem-based spacing lands on
+     ChatGPT's pixel grid (h-9 = 36px); body copy is 14px. */
+  @apply bg-sidebar-bg text-foreground font-sans antialiased;
+  font-feature-settings: "kern", "liga", "calt";
+
+  body {
+    @apply text-sm leading-5;
+    /* flex-wrap: third parties append stray children to <body> (OpenClash
+       portals its dialogs there with oc.css's .oc { width: 100% }, browser
+       extensions inject helper divs). In a nowrap row they'd join the
+       sidebar/#main-wrapper line and shrink #main-wrapper (flex-basis 0) to
+       nothing; wrapping shunts them onto a second line below the viewport-
+       high first line (#sidebar/#main-wrapper are h-full), out of view —
+       the same place strays end up on a normally-flowing page (below the
+       content). */
+    /* h-dvh with no vh fallback: the OKLCH tokens already gate us to
+       browsers (Chrome 111+ / Safari 15.4+ / Firefox 113+) that all ship
+       dvh, so a fallback would only serve browsers the theme can't render
+       colors on anyway. */
+    @apply flex h-dvh flex-wrap;
+
+    /* Scroll lock while a LuCI modal is open — ui.js toggles this class on
+       <body>, the stock LuCI convention. Off-modal the shell needs no clamp:
+       the row exactly fills h-dvh and scrolling lives in #maincontent. */
+    &.modal-overlay-active {
+      @apply overflow-hidden;
+    }
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply text-foreground font-sans leading-tight font-medium tracking-normal;
+}
+
+/* ChatGPT heading ladder: page title 24/28.8 500, dialog title 20/28 600,
+   section title 16/24 500, group label 14/20 500. */
+h1 {
+  @apply mb-4 text-2xl leading-[1.2];
+}
+h2 {
+  @apply mb-3 text-xl leading-7 font-semibold;
+}
+h3 {
+  @apply mb-3 text-base leading-6;
+}
+h4 {
+  @apply mb-2 text-base leading-6;
+}
+h5 {
+  @apply mb-1 text-sm leading-5;
+}
+h6 {
+  @apply mb-1 text-xs leading-4;
+}
+
+hr {
+  @apply border-border my-4 border-t;
+}
+
+strong {
+  @apply font-semibold;
+}
+
+abbr[title] {
+  @apply decoration-text-tertiary cursor-help underline decoration-dotted underline-offset-2;
+}
+
+/* Paragraphs inherit their container's ink: a description block (secondary)
+   must not be repainted in full ink by its inner <p>. */
+p {
+  @apply text-sm leading-5 text-inherit;
+}
+
+pre {
+  @apply border-border bg-muted text-foreground block rounded-xl border px-3 py-2 font-mono text-[13px] leading-5 break-words whitespace-pre-wrap;
+}
+
+code {
+  @apply bg-muted text-foreground rounded-md px-1.5 py-0.5 font-mono text-[13px];
+}
+
+a {
+  @apply text-info no-underline hover:underline;
+}
+
+var {
+  @apply text-foreground font-mono not-italic;
+}
+
+tt,
+kbd,
+samp {
+  @apply font-mono text-[13px];
+}
+
+small {
+  @apply text-muted-foreground text-xs font-normal;
+}
+
+/* <big> (Wireless' radio names) is 1.2em in UA styles — 16.8px, off
+   ChatGPT's type scale; it takes the 16/24 section-title step. */
+big {
+  @apply text-base leading-6;
+}
+
+/* ChatGPT sets no italics anywhere in its UI: LuCI's <em> (empty states,
+   "this device", "any zone", inline notes) reads as secondary ink. */
+em {
+  @apply text-muted-foreground font-normal not-italic;
+}
+
+::selection {
+  @apply bg-accent-a30;
+}

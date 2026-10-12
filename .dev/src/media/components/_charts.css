@@ -1,0 +1,183 @@
+/*
+  LuCI's realtime graphs (Status › Realtime Graphs: load, bandwidth,
+  wireless, connections; Channel Analysis) are SVGs whose host div and
+  every series carry inline styles — white box, black border, black grid,
+  9pt shadowed labels, web-safe series colours. Restyled as ChatGPT's chart
+  card (Settings › Usage › Analytics): 16px-cornered card on the canvas,
+  a 5% ink grid, 12px secondary labels, series in the chart palette with a
+  light area fill. !important is the only way past an inline style; the
+  markup and its measured width are untouched.
+*/
+
+#view div[style*="border:1px solid #000"][style*="background:#fff"] {
+  @apply border-border! bg-panel-bg! overflow-hidden rounded-2xl;
+
+  svg line[style*="stroke"] {
+    stroke: var(--foreground-a5) !important;
+    stroke-width: 1 !important;
+  }
+
+  svg text[style] {
+    @apply font-sans;
+    font-size: 12px !important;
+    text-shadow: none !important;
+  }
+
+  /* Axis labels (#eee) go secondary; Channel Analysis' per-network labels
+     keep their network's colour — they are the legend. */
+  svg text[style*="fill:#eee"] {
+    fill: var(--muted-foreground) !important;
+  }
+
+  /* Area under each series: dither-kit's dotted dither, a pixel checker in
+     the series colour (patterns live in header.ut's #chart-dither). */
+  svg polyline[style] {
+    fill-opacity: 0.55 !important;
+    stroke-width: 1.5 !important;
+    stroke-linejoin: round;
+  }
+
+  svg :is(#rx, #rssi, #udp) {
+    fill: url(#dither-blue) !important;
+    stroke: var(--chart-blue) !important;
+  }
+
+  svg :is(#tx, #tcp, #rate) {
+    fill: url(#dither-green) !important;
+    stroke: var(--chart-green) !important;
+  }
+
+  svg :is(#noise, #other, #load01) {
+    fill: url(#dither-red) !important;
+    stroke: var(--chart-red) !important;
+  }
+
+  svg #load05 {
+    fill: url(#dither-orange) !important;
+    stroke: var(--chart-orange) !important;
+  }
+
+  svg #load15 {
+    fill: url(#dither-yellow) !important;
+    stroke: var(--chart-yellow) !important;
+  }
+}
+
+/* Scale caption under a realtime chart ("(3 minute window, 3 second
+   interval)"): the 12px secondary range label of ChatGPT's chart header.
+   The <br> after it is LuCI's spacer; the legend's own margin replaces it. */
+#view div.right:has(> small[id^="scale"]) {
+  @apply text-muted-foreground mt-2 text-left! text-xs leading-4 tabular-nums;
+
+  + br {
+    @apply hidden;
+  }
+}
+
+/* Realtime legend tables (one row per series: label / current / Average /
+   avg / Peak / peak) become Analytics' legend: per series a 4×40 rounded
+   colour bar, then three stacked label-over-value stats — 12px secondary
+   label, 18px medium tabular value. The rate's "(x MB/s)" second line stays
+   12px secondary via ::first-line. Grid flows by column so each label lands
+   above its value; the markup and its ids (poll targets) are untouched. */
+#view table.table:has(strong[style*="border-bottom"]) {
+  @apply mt-4 mb-0 flex flex-col gap-4 rounded-none border-0 bg-transparent;
+
+  /* Views build rows straight into the table (E() makes no tbody). */
+  > tbody {
+    @apply contents;
+  }
+
+  tr.tr {
+    @apply relative grid grid-flow-col grid-cols-3 grid-rows-[auto_auto] gap-x-6 border-0 p-0 pl-3.5 hover:bg-transparent max-md:flex-none;
+    @apply before:absolute before:top-0.5 before:left-0 before:h-10 before:w-1 before:rounded-xs before:bg-(--legend) before:content-[''];
+
+    --legend: var(--muted-foreground);
+    &:has(strong:is([style*="#f00"], [style*="red"])) {
+      --legend: var(--chart-red);
+    }
+    &:has(strong[style*="#f60"]) {
+      --legend: var(--chart-orange);
+    }
+    &:has(strong[style*="#fa0"]) {
+      --legend: var(--chart-yellow);
+    }
+    &:has(strong:is([style*="#00f"], [style*="blue"])) {
+      --legend: var(--chart-blue);
+    }
+    &:has(strong:is([style*="#0f0"], [style*="green"])) {
+      --legend: var(--chart-green);
+    }
+
+    > td.td {
+      @apply border-0 bg-transparent! p-0 text-left! align-top! text-xs leading-[18px];
+
+      &:nth-child(odd) {
+        @apply text-muted-foreground;
+
+        strong {
+          @apply border-0! p-0 font-normal text-inherit;
+        }
+      }
+
+      &:first-child strong {
+        @apply text-foreground;
+      }
+
+      &:nth-child(even) {
+        @apply text-muted-foreground break-words tabular-nums;
+
+        &::first-line {
+          @apply text-foreground text-lg leading-snug font-medium;
+        }
+      }
+    }
+  }
+}
+
+/* A tab group whose panes are charts (realtime interfaces / radios, vnStat
+   ranges, Statistics plugin instances) is the chart's switcher, not page
+   navigation: Analytics' "7d / 30d" segmented control — a 10px-cornered 5%
+   well, 24px 12/16 medium segments in secondary ink, the selected one
+   lifted onto the canvas with shadow-sm. */
+.cbi-tabmenu:has(
+  ~ * :is(div[style*="border:1px solid #000"], img[data-iface]),
+  ~ [data-tab] :is(div[style*="border:1px solid #000"], img[data-iface]),
+  + div > [data-tab][data-plugin]
+) {
+  @apply bg-muted mb-3 inline-flex w-fit gap-0.5 rounded-[10px] p-0.5;
+
+  li > a {
+    @apply text-muted-foreground hover:text-foreground h-6 rounded-lg px-2 text-xs leading-4 font-medium hover:bg-transparent;
+  }
+
+  li.cbi-tab > a {
+    @apply bg-background text-foreground hover:bg-background shadow-sm;
+  }
+}
+
+/* One Analytics card: chart, range caption and legend. LuCI emits them as
+   siblings (div[chart] + div.right > #scale + br + table) inside sections
+   that may hold unrelated content (Connections' live table), so the card is
+   drawn across the three siblings instead of around the section — the
+   chart drops its bottom edge, the caption and legend continue the card's
+   hairline sides and the legend closes it with the 16px corners. */
+#view
+  div[style*="border:1px solid #000"][style*="background:#fff"]:has(
+    + div.right > small[id^="scale"]
+  ) {
+  @apply rounded-b-none border-b-0!;
+}
+
+#view
+  div[style*="border:1px solid #000"]
+  + div.right:has(> small[id^="scale"]) {
+  @apply border-border bg-panel-bg m-0 border-x px-4 pt-3 pb-0;
+}
+
+#view
+  div.right:has(> small[id^="scale"])
+  + br
+  + table.table:has(strong[style*="border-bottom"]) {
+  @apply border-border bg-panel-bg mt-0 mb-6 rounded-t-none rounded-b-2xl border-x border-b px-4 pt-4 pb-4;
+}

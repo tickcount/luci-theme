@@ -1,0 +1,160 @@
+/* ChatGPT status pill (Billing › "Due"): 20px, full radius, 12/16 medium in
+   the status colour on a ~15% wash of it; the neutral one ("Paid") keeps
+   secondary ink on the 5% fill. */
+.label {
+  @apply bg-muted text-muted-foreground inline-flex h-5 items-center rounded-full px-2 text-xs leading-4 font-medium;
+
+  &.important {
+    @apply bg-info-a15 text-info;
+  }
+  &.warning,
+  &.notice {
+    @apply bg-warning-a15 text-warning;
+  }
+  &.success {
+    @apply bg-success-a15 text-success;
+  }
+}
+
+.zonebadge {
+  @apply bg-muted text-foreground inline-flex items-center gap-1.5 overflow-visible rounded-lg border border-transparent px-2 py-1 align-middle text-sm leading-5 font-medium [transition:color_.15s,background-color_.15s,border-color_.15s];
+
+  /* Zone badge: a neutral pill led by the zone's colour as a dot (ChatGPT
+     keeps colour to small markers). The port-status membership strips are
+     .zonebadge too (inline height, one per network) — they become the same
+     8px dot, in a centred row (link-down ports keep LuCI's inline 25%
+     opacity). */
+  &[style*="--zone-color-rgb"]:not([style*="height"]) {
+    @apply bg-muted! border-transparent before:size-2 before:shrink-0 before:rounded-full before:bg-[rgb(var(--zone-color-rgb))] before:content-[''];
+  }
+
+  &[style*="height"] {
+    @apply size-2! flex-none! rounded-full border-0 p-0;
+  }
+
+  &.zonebadge-empty {
+    @apply border-border text-muted-foreground border-dashed bg-transparent font-normal not-italic;
+  }
+
+  /* Bare zone-colour swatch: the interface overview / tooltip renders a
+     label-less `.zonebadge` as a colour chip prefixing an `.ifacebadge`. The
+     tag redesign's horizontal padding is meant for text labels, so keep the
+     label-less swatch a compact pill instead of a wide block. */
+  .ifacebadge > & {
+    @apply rounded-full px-1 py-0.5;
+  }
+
+  .cbi-dropdown & {
+    @apply rounded-md px-1.5 py-0.5;
+  }
+}
+
+.ifacebadge {
+  @apply bg-muted text-foreground inline-flex cursor-default flex-nowrap items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1 text-sm leading-5 font-normal [transition:color_.15s,background-color_.15s,border-color_.15s];
+
+  .zonebadge > & {
+    @apply rounded-md px-1.5 py-0;
+    img {
+      @apply mr-1 w-4;
+    }
+  }
+
+  .cbi-dropdown & {
+    @apply gap-1 rounded-md px-1.5 py-0.5;
+    img {
+      @apply mr-1 w-4;
+    }
+  }
+
+  > img,
+  > .cbi-tooltip-container > img {
+    @apply w-5 shrink-0 self-center;
+  }
+
+  > span {
+    .nowrap {
+      @apply mb-1.5 inline-block text-sm;
+    }
+  }
+
+  /* The active device: ChatGPT marks a current chip with a deeper fill,
+     never a blue outline. */
+  &.ifacebadge-active {
+    @apply bg-soft-hover font-medium;
+  }
+
+  &.large {
+    @apply min-w-48 flex-1 px-4 py-3;
+  }
+}
+
+/* Service state painted with an inline web colour (irqbalance, upnp and
+   other apps print "RUNNING" / "NOT RUNNING" as color:green / red text):
+   the same status pill as .label. */
+#view
+  :is(strong, span, b, em, font)[style*="color"]:is(
+    [style*="color:green"],
+    [style*="color: green"],
+    [style*="color:red"],
+    [style*="color: red"]
+  ) {
+  @apply bg-success-a15 text-success! inline-flex h-5 items-center rounded-full px-2 align-middle text-xs leading-4 font-medium not-italic;
+
+  &:is([style*="color:red"], [style*="color: red"]) {
+    @apply bg-destructive-a15 text-destructive!;
+  }
+}
+
+/* Rich device tooltip (Network › Interfaces: the device icon's hover card is
+   a `.cbi-tooltip.ifacebadge.large` — icon + Type/Device/RX/TX). The badge's
+   5% wash used to win over the bubble fill, leaving a see-through box
+   parked on top of the interface card. It is ChatGPT's popover instead —
+   the opaque menu surface, menu shadow, 16px corners — dropped below its
+   icon and centred on it. */
+.cbi-tooltip.ifacebadge {
+  @apply bg-elevated-secondary shadow-menu text-foreground top-full mt-2 w-max max-w-xs -translate-x-1/2 items-start gap-3 rounded-2xl border-0 p-3 text-xs leading-5 font-normal backdrop-blur-sm;
+
+  > img {
+    @apply mt-0.5 size-5 flex-none self-start;
+  }
+
+  strong {
+    @apply text-muted-foreground font-normal;
+  }
+
+  .cbi-tooltip-container:hover > & {
+    @apply left-1/2;
+  }
+}
+
+/* A zone inside a selector pill (firewall zone pickers): the pill is the
+   surface, so the zone badge loses its own box — dot + name — and its
+   networks become small round chips instead of boxes nested in a box. The
+   row keeps the selector's 36px height and 12px lead-in; the zone name
+   gets a little more air before its networks than the chips between
+   themselves. */
+.cbi-dropdown:not(.btn, .cbi-button)
+  > ul:not(.dropdown)
+  > li:has(> .zonebadge[style*="--zone-color-rgb"]) {
+  @apply py-1 pl-3;
+}
+
+.cbi-dropdown .zonebadge[style*="--zone-color-rgb"]:not([style*="height"]) {
+  @apply gap-1.5 rounded-none bg-transparent! p-0;
+
+  > strong + .ifacebadge {
+    @apply ml-1;
+  }
+
+  > .ifacebadge {
+    @apply bg-muted h-6 gap-1 rounded-full px-2 py-0 text-xs leading-4 font-normal;
+
+    img {
+      @apply mr-0 size-3.5;
+    }
+
+    &.ifacebadge-active {
+      @apply bg-soft-hover;
+    }
+  }
+}

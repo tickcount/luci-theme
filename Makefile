@@ -1,15 +1,15 @@
 #
-# Copyright (C) 2025 eamonxg <eamonxiong@gmail.com>
+# Copyright (C) 2026 eamonxg <eamonxiong@gmail.com>
 # Licensed under the Apache License, Version 2.0.
 #
 
 include $(TOPDIR)/rules.mk
 
-LUCI_TITLE:=Outline Theme (A modern browser theme built with Vite and Tailwind CSS)
+LUCI_TITLE:=Outline - a ChatGPT-style LuCI theme for OpenWrt.
 LUCI_DEPENDS:=+luci-base
 
-PKG_VERSION:=0.12.0
-PKG_RELEASE:=20260304
+PKG_VERSION:=1.0.0
+PKG_RELEASE:=20260920
 PKG_LICENSE:=Apache-2.0
 
 LUCI_MINIFY_CSS:=

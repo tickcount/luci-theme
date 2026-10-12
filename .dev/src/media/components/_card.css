@@ -1,0 +1,262 @@
+/* ── Sections ────────────────────────────────────────────────────────
+   ChatGPT groups settings as a section title (16/24 medium) sitting above a
+   bordered card: 16px corners, 1px hairline, the page canvas as fill. LuCI's
+   .cbi-section is that group — its h3 the title, its .cbi-section-node (or
+   a bare run of .cbi-value rows) the card. The section itself stays an
+   unframed wrapper so tables, ifaceboxes and app markup inside it keep
+   their own surfaces. No overflow clipping on cards: LuCI dropdowns are
+   absolutely positioned and must escape them. */
+.cbi-section {
+  @apply mb-8 overflow-visible;
+
+  &[data-tab-title] {
+    @apply m-0 p-0;
+  }
+  &[data-tab-active="true"] {
+    @apply mb-8;
+  }
+
+  > .cbi-title {
+    @apply flex items-start justify-between;
+
+    > h3 {
+      @apply flex-1;
+
+      .label[data-clickable] {
+        @apply bg-muted text-foreground hover:bg-soft-hover inline-flex size-6 cursor-pointer items-center justify-center rounded-md p-0 active:scale-95;
+      }
+
+      span[data-indicator="poll-status"] {
+        @apply relative size-4 cursor-pointer text-[0px];
+        @apply before:absolute before:size-4 before:bg-current before:[mask-size:cover] before:[mask-position:center] before:[mask-repeat:no-repeat];
+
+        &[data-style="active"] {
+          @apply before:[mask-image:var(--icon-chevron-down)];
+        }
+        &[data-style="inactive"] {
+          @apply before:[mask-image:var(--icon-chevron-up)];
+        }
+      }
+    }
+  }
+
+  legend {
+    @apply text-foreground mb-3 text-base leading-6 font-medium;
+  }
+
+  h3 {
+    @apply text-foreground mb-3 border-0 p-0 text-base leading-6 font-medium;
+  }
+
+  > em,
+  > .cbi-section-node > em {
+    @apply text-muted-foreground block px-4 py-3 text-sm not-italic;
+  }
+
+  .cbi-section-create {
+    @apply mt-3 flex flex-wrap items-center gap-2;
+    > div {
+      @apply flex-none;
+    }
+  }
+
+  .cbi-section-remove {
+    @apply mb-2 flex justify-end;
+  }
+
+  .network-status-table {
+    @apply mb-3 flex flex-wrap justify-around gap-4 md:flex-nowrap;
+  }
+
+  div[style*="display:grid"]:has(> .ifacebox) {
+    @apply place-items-center;
+  }
+}
+
+/* The card. */
+.cbi-section-node,
+.cbi-section:has(> .cbi-value) {
+  @apply border-border bg-panel-bg rounded-2xl border;
+}
+
+/* Non-row content placed straight into a card (views that build their own
+   node, e.g. SSH keys' list) gets the row inset. */
+.cbi-section-node
+  > :is(
+    .cbi-dynlist,
+    p,
+    .cbi-section-descr,
+    .control-group,
+    .cbi-progressbar,
+    ul
+  ) {
+  @apply m-4;
+}
+
+/* Tabbed node: the pane rows are the card's rows; the tab bar sits above
+   the card (ui.tabs inserts ul.cbi-tabmenu before the node). */
+.cbi-section-node-tabbed {
+  @apply mt-0;
+}
+
+/* Nested sections (form.SectionValue, a section inside a row or a modal
+   map) drop the outer spacing. */
+.cbi-value .cbi-section,
+.cbi-value-field .cbi-section {
+  @apply mb-0;
+}
+
+/* A view that appends its own heading + table into a form card (System ›
+   Mount Points: "Mounted file systems"; vnStat › Configuration:
+   "Unconfigured interfaces") gets them drawn as a separate block. The
+   node stops being the card; its leading rows form the card themselves
+   (side hairlines, top/bottom caps), the heading becomes a section title
+   below it and the table keeps its own card. */
+.cbi-section-node:has(> h3) {
+  @apply rounded-none border-0 bg-transparent;
+
+  > .cbi-value {
+    @apply border-border bg-panel-bg border-x;
+
+    &:first-child {
+      @apply rounded-t-2xl border-t;
+    }
+
+    &:has(+ :not(.cbi-value)),
+    &:last-child {
+      @apply rounded-b-2xl border-b;
+    }
+  }
+
+  > h3 {
+    @apply mt-8 mb-3;
+  }
+
+  > h3 ~ :is(p, .cbi-section-descr, div:not([class])) {
+    @apply text-muted-foreground m-0 -mt-1 mb-3 p-0;
+  }
+}
+
+/* A card inside a card (interface › DHCP Server, DHCP › DNS Records) is
+   flattened: ChatGPT never nests bordered surfaces — the inner rows keep
+   their own hairline dividers inside the outer card. */
+.cbi-section-node .cbi-section-node,
+.cbi-section-node .cbi-section:has(> .cbi-value) {
+  @apply rounded-none border-0 bg-transparent;
+}
+
+.cbi-tab-descr {
+  @apply text-muted-foreground px-4 pt-3 text-sm leading-5;
+}
+
+.ifacebox {
+  @apply border-border bg-panel-bg relative inline-flex min-w-32 flex-col items-stretch overflow-visible rounded-2xl border text-center text-sm leading-5;
+
+  #cbi-network-interface & {
+    @apply md:min-w-38;
+  }
+
+  /* Head: the card's title row, not a coloured bar. State reads as a
+     leading dot — green when the interface is up (.active, e.g. "IPv4
+     Upstream"), the firewall zone's colour when LuCI tints the head. */
+  .ifacebox-head {
+    @apply border-border text-foreground relative flex w-full items-center justify-center gap-2 rounded-t-2xl border-b bg-transparent! px-3 py-2.5 text-center text-sm leading-5 font-medium;
+
+    &[style*="--zone-color-rgb"] {
+      @apply before:size-2 before:shrink-0 before:rounded-full before:bg-[rgb(var(--zone-color-rgb))] before:content-[''];
+    }
+
+    &.active {
+      @apply before:bg-success before:size-2 before:shrink-0 before:rounded-full before:content-[''];
+    }
+
+    /* Port status: the row of network-membership dots. */
+    &:has(> .zonebadge[style*="height"]) {
+      @apply gap-1 rounded-none py-2;
+    }
+
+    &.cbi-tooltip-container {
+      @apply static;
+      .cbi-tooltip {
+        @apply bottom-0 left-0;
+      }
+    }
+  }
+
+  .ifacebox-body {
+    /* Flex column base: items-stretch lets label/value rows span full width
+       (e.g. luci-app-modemdata) while justify-center keeps rows tight together
+       instead of spread. Icon-only cards centre via text-center / mx-auto. The
+       interfaces overview layers its richer layout under .network-status-table. */
+    @apply text-muted-foreground flex w-full flex-1 flex-col items-stretch justify-center gap-1 rounded-b-2xl p-3 text-center;
+
+    /* "Protocol: DHCP client": the label in ink, the value secondary —
+       ChatGPT's Username → @handle rows. */
+    strong {
+      @apply text-foreground font-medium;
+    }
+
+    > img {
+      @apply mx-auto w-5;
+    }
+
+    > span {
+      @apply space-y-1;
+
+      .cbi-tooltip {
+        @apply delay-200;
+      }
+      .nowrap {
+        @apply inline-block;
+      }
+
+      img {
+        @apply w-5 shrink-0;
+      }
+    }
+
+    > div {
+      @apply block w-full space-y-0;
+    }
+
+    .cbi-tooltip-container {
+      @apply text-foreground static inline-flex cursor-help items-center justify-center;
+      .cbi-tooltip {
+        @apply bottom-0;
+        .nowrap {
+          @apply whitespace-nowrap;
+        }
+      }
+
+      /* The device card popover (_badge.css) hangs below the whole
+         interface card, sized by its content — not pinned to the card's
+         bottom edge, which clamped it to a 24px strip. */
+      .cbi-tooltip.ifacebadge {
+        @apply top-full bottom-auto h-auto;
+      }
+    }
+
+    small {
+      @apply block text-xs leading-4;
+    }
+  }
+}
+
+/*
+  Network interfaces overview — the rich equal-height card layout is scoped here
+  (not on the base) so third-party pages keep the plain, tolerant defaults above.
+*/
+.network-status-table .ifacebox-body {
+  @apply flex h-full flex-1 flex-col items-center justify-around gap-2;
+
+  > div {
+    @apply flex flex-wrap gap-2;
+  }
+
+  /* flex-1 alone lets the badges shrink to min-content, so six SSIDs stay
+     crammed on one line instead of wrapping. The floor mirrors
+     luci-theme-bootstrap's min-width: 220px on the same badges. */
+  .ifacebadge {
+    @apply min-w-55 flex-1;
+  }
+}

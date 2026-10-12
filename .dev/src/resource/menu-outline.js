@@ -1,1204 +1,1269 @@
 "use strict";
 "require baseclass";
 "require ui";
-"require request";
+
+/**
+ * Outline sidebar + menu: empty #sidebar in header.ut, chrome built here.
+ * Menu depth: top + one submenu level in the sidebar; deeper levels render
+ * as #tabmenu tabs.
+ */
+
+/** LuCI menu node `name` → icon basename under /luci-static/outline/icons/.
+    First-level nodes only — sub-level names such as firewall
+    (admin/network/firewall) or opkg (admin/system/opkg) never hit this map
+    and were removed as dead entries. */
+const ICON_MAP = {
+  status: "activity",
+  system: "settings",
+  network: "network",
+  services: "layers",
+  nas: "hard-drive",
+  control: "sliders-horizontal",
+  vpn: "shield",
+  docker: "container",
+  statistics: "chart-bar",
+  nlbw: "gauge",
+  /** Covers VoIP/PBX apps — no official OpenWrt package registers a
+      verified menu.d node under this name, best-effort key */
+  asterisk: "phone",
+  /** luci-base `admin/logout` leaf */
+  logout: "log-out",
+  default: "layout-dashboard",
+};
+
+/** sessionStorage key replayed pre-paint by the inline script in header.ut */
+const CACHE_KEY = "outline.sidebar.cache";
+
+/** localStorage key for the palette's most-recently-used page paths */
+const RECENTS_KEY = "outline.palette.recents";
 
 return baseclass.extend({
   __init__() {
-    ui.menu.load().then((tree) => this.render(tree));
-    this.initMobileMenu();
-    this.initUciIndicator();
-    this.initVercelTabs();
-    this.initTabContentAnimation();
-    this.initCustomSelects();
-    this.initDescriptionPlacement();
-    this.initTableOfContents();
-    this.initToastAutoDismiss();
-    this.initModalOverride();
+    ui.menu.load().then((tree) => {
+      this.renderSidebarChrome();
+      this.render(tree);
+      this.initUciIndicator();
+      this.cacheSidebar();
+      window.addEventListener("pagehide", () => this.cacheSidebar());
+      document.dispatchEvent(new Event("outline-sidebar-ready"));
+    });
   },
 
-  initUciIndicator() {
-    const original = ui.changes?.setIndicator;
-    if (!original) return;
-
-    ui.changes.setIndicator = function (n) {
-      original.call(this, n);
-      document
-        .querySelector('[data-indicator="uci-changes"]')
-        ?.setAttribute("data-count", n || 0);
-    };
-  },
-
-  initModalOverride() {
-    const origShow = ui.showModal;
-    const origHide = ui.hideModal;
-    if (!origShow || !origHide) return;
-
-    let hideTimer = null;
-
-    ui.showModal = function (title, children, ...classes) {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-      document.body.classList.remove("modal-overlay-exit");
-      const dlg = origShow.call(this, title, children, ...classes);
-      dlg.classList.remove("modal-exit");
-      return dlg;
-    };
-
-    ui.hideModal = function () {
-      const overlay = document.getElementById("modal_overlay");
-      const dlg = overlay?.firstElementChild;
-      if (!dlg || !document.body.classList.contains("modal-overlay-active")) {
-        origHide.call(this);
-        return;
-      }
-
-      dlg.classList.add("modal-exit");
-      document.body.classList.add("modal-overlay-exit");
-
-      const finish = () => {
-        hideTimer = null;
-        dlg.classList.remove("modal-exit");
-        document.body.classList.remove("modal-overlay-exit");
-        origHide.call(this);
-      };
-
-      hideTimer = setTimeout(finish, 180);
-    };
-
-    /* Override displayStatus to use toast instead of modal */
-    const origDisplayStatus = ui.changes?.displayStatus;
-    if (origDisplayStatus) {
-      let statusToast = null;
-
-      const hasButtons = (content) => {
-        if (!content) return false;
-        if (content.querySelector?.(".btn")) return true;
-        if (Array.isArray(content))
-          return content.some((c) => c?.querySelector?.(".btn"));
-        return false;
-      };
-
-      const dismissStatusToast = () => {
-        if (!statusToast || !statusToast.parentNode) return;
-        statusToast.classList.add("toast-exit");
-        statusToast.addEventListener(
-          "animationend",
-          () => statusToast.remove(),
-          { once: true },
-        );
-        setTimeout(() => {
-          if (statusToast?.parentNode) statusToast.remove();
-        }, 400);
-        statusToast = null;
-      };
-
-      ui.changes.displayStatus = function (type, content) {
-        /* Interactive content (connectivity warning) → keep as modal */
-        if (type && hasButtons(content)) {
-          dismissStatusToast();
-          origDisplayStatus.call(this, type, content);
-          return;
-        }
-
-        /* Hide → dismiss toast */
-        if (!type) {
-          dismissStatusToast();
-          if (this.was_polling) request.poll.start();
-          return;
-        }
-
-        /* Show/update status toast */
-        const container = document.getElementById("maincontent");
-        if (!container) {
-          origDisplayStatus.call(this, type, content);
-          return;
-        }
-
-        if (!statusToast || !statusToast.parentNode) {
-          statusToast = E("div", { class: "alert-message" });
-          statusToast._toastInit = true;
-          container.insertBefore(statusToast, container.firstChild);
-        }
-
-        /* Strip 'notice' so it renders as neutral toast, not warning */
-        const classes = type
-          .split(/\s+/)
-          .filter((c) => c && c !== "notice");
-        statusToast.className = "alert-message";
-        if (classes.length)
-          DOMTokenList.prototype.add.apply(statusToast.classList, classes);
-
-        if (content) L.dom.content(statusToast, content);
-
-        if (!this.was_polling) {
-          this.was_polling = request.poll.active();
-          request.poll.stop();
-        }
-      };
+  /**
+   * Snapshot the rendered sidebar so header.ut can replay it in the first
+   * frame of the next navigation (pagehide keeps accordion/scroll current).
+   */
+  cacheSidebar() {
+    // Set by header.ut's delegated logout-click listener.
+    if (window.outlineSuppressSidebarCache) return;
+    const sidebar = document.getElementById("sidebar");
+    const nav = document.getElementById("sidebar-nav");
+    if (!sidebar || !nav) return;
+    try {
+      sessionStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          v: 4,
+          lang: document.documentElement.lang || "",
+          html: sidebar.innerHTML,
+          scroll: nav.scrollTop || 0,
+        }),
+      );
+    } catch (e) {
+      /* storage full/disabled — next page just builds normally */
     }
   },
 
-  initToastAutoDismiss() {
-    const DISMISS_DELAY = 30000;
-    const container = document.getElementById("maincontent");
-    if (!container) return;
-
-    const updateIndices = () => {
-      const toasts = container.querySelectorAll(
-        ":scope > .alert-message:not(.toast-exit)",
-      );
-      toasts.forEach((t, i) => {
-        t.style.setProperty("--toast-index", i);
-      });
-    };
-
-    const dismissToast = (toast) => {
-      if (toast._toastDismissing) return;
-      toast._toastDismissing = true;
-      if (toast._toastTimer) clearTimeout(toast._toastTimer);
-
-      toast.classList.add("toast-exit");
-      toast.addEventListener(
-        "animationend",
-        () => {
-          toast.remove();
-          updateIndices();
-        },
-        { once: true },
-      );
-
-      /* Fallback removal if animation doesn't fire */
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.remove();
-          updateIndices();
-        }
-      }, 400);
-    };
-
-    const setupToast = (toast) => {
-      if (toast._toastInit) return;
-      toast._toastInit = true;
-
-      /* Recalculate stacking indices (newest = index 0 = top) */
-      updateIndices();
-
-      /* Auto-dismiss after delay */
-      toast._toastTimer = setTimeout(() => dismissToast(toast), DISMISS_DELAY);
-
-      /* Dismiss on close button click */
-      const btn = toast.querySelector(".btn");
-      if (btn) {
-        btn.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          dismissToast(toast);
-        });
-      }
-    };
-
-    /* Watch for new toasts added to #maincontent */
-    new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        for (const node of m.addedNodes) {
-          if (
-            node.nodeType === 1 &&
-            node.classList?.contains("alert-message") &&
-            node.parentNode === container
-          ) {
-            setupToast(node);
-          }
-        }
-      }
-    }).observe(container, { childList: true });
-
-    /* Setup any existing toasts */
-    container
-      .querySelectorAll(":scope > .alert-message")
-      .forEach(setupToast);
+  _mediaBase() {
+    const fromHtml =
+      document.documentElement.getAttribute("data-outline-media");
+    const side = document.getElementById("sidebar");
+    const fromSide = side && side.getAttribute("data-media");
+    const raw = fromHtml || fromSide || "/luci-static/outline";
+    return String(raw).replace(/\/$/, "");
   },
 
-  initVercelTabs() {
-    const bindTabMenu = (tabMenu) => {
-      const items = Array.from(tabMenu.querySelectorAll("li"));
-      if (!items.length) return;
+  _sectionIcon(sectionName, size) {
+    const key = String(sectionName || "").toLowerCase();
+    const icon = ICON_MAP[key] || ICON_MAP.default;
+    return this._iconFile(icon, size);
+  },
 
-      let activeReady = false;
+  /** luci-base menu `admin/logout` — render in sidebar footer, not main nav */
+  _isLogoutMenuItem(section) {
+    const n = String(
+      section && section.name != null ? section.name : "",
+    ).toLowerCase();
+    return n === "logout" || n.endsWith("/logout");
+  },
 
-      const updateActiveIndicator = () => {
-        const active = tabMenu.querySelector("li.cbi-tab");
-        if (!active) return;
-        const menuRect = tabMenu.getBoundingClientRect();
-        const activeRect = active.getBoundingClientRect();
-
-        /* Skip transition on first placement so the underline appears instantly */
-        if (!activeReady) {
-          tabMenu.classList.add("tab-active-jump");
-          void tabMenu.offsetWidth;
-        }
-
-        tabMenu.style.setProperty(
-          "--tab-active-left",
-          `${activeRect.left - menuRect.left}px`,
-        );
-        tabMenu.style.setProperty(
-          "--tab-active-width",
-          `${activeRect.width}px`,
-        );
-        tabMenu.style.setProperty(
-          "--tab-active-top",
-          `${activeRect.bottom - menuRect.top}px`,
-        );
-
-        if (!activeReady) {
-          void tabMenu.offsetWidth;
-          tabMenu.classList.remove("tab-active-jump");
-          activeReady = true;
-        }
-      };
-
-      let lastHoverTop = null;
-      let hoverHideTimer = null;
-
-      const updateHoverIndicator = (li) => {
-        if (!li) {
-          hoverHideTimer = setTimeout(() => {
-            tabMenu.classList.remove("tab-hovering");
-            lastHoverTop = null;
-          }, 80);
-          return;
-        }
-        if (hoverHideTimer) {
-          clearTimeout(hoverHideTimer);
-          hoverHideTimer = null;
-        }
-        const menuRect = tabMenu.getBoundingClientRect();
-        const liRect = li.getBoundingClientRect();
-        const newTop = liRect.top - menuRect.top;
-
-        /* First hover (no previous position) or row jump — skip transition */
-        const needsJump =
-          lastHoverTop === null ||
-          (lastHoverTop !== null && Math.abs(newTop - lastHoverTop) > 2);
-
-        if (needsJump) {
-          tabMenu.classList.add("tab-hover-jump");
-          void tabMenu.offsetWidth;
-        }
-
-        tabMenu.style.setProperty(
-          "--tab-hover-left",
-          `${liRect.left - menuRect.left}px`,
-        );
-        tabMenu.style.setProperty("--tab-hover-width", `${liRect.width}px`);
-        tabMenu.style.setProperty("--tab-hover-top", `${newTop}px`);
-        tabMenu.classList.add("tab-hovering");
-
-        if (needsJump) {
-          void tabMenu.offsetWidth;
-          tabMenu.classList.remove("tab-hover-jump");
-        }
-
-        lastHoverTop = newTop;
-      };
-
-      items.forEach((li) => {
-        li.addEventListener("mouseenter", () => updateHoverIndicator(li));
-      });
-      tabMenu.addEventListener("mouseleave", () => updateHoverIndicator(null));
-
-      const observer = new MutationObserver(updateActiveIndicator);
-      items.forEach((li) =>
-        observer.observe(li, { attributes: true, attributeFilter: ["class"] }),
-      );
-
-      requestAnimationFrame(updateActiveIndicator);
-
-      let resizeTimer;
-      window.addEventListener("resize", () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(updateActiveIndicator, 100);
-      });
-    };
-
-    const waitForTabs = new MutationObserver(() => {
-      document.querySelectorAll(".cbi-tabmenu").forEach((menu) => {
-        if (menu.dataset.vercelInit) return;
-        menu.dataset.vercelInit = "1";
-        bindTabMenu(menu);
-      });
-    });
-
-    const target = document.getElementById("maincontent") || document.body;
-    waitForTabs.observe(target, { childList: true, subtree: true });
-
-    document.querySelectorAll(".cbi-tabmenu").forEach((menu) => {
-      menu.dataset.vercelInit = "1";
-      bindTabMenu(menu);
+  _iconFile(name, size) {
+    const media = this._mediaBase();
+    return E("img", {
+      src: `${media}/icons/${name}.svg`,
+      width: String(size),
+      height: String(size),
+      alt: "",
+      loading: "lazy",
+      class: "outline-icon",
     });
   },
 
-  initNavHover() {
-    const nav = document.querySelector("#topmenu");
-    if (!nav) return;
+  /**
+   * LuCI root often has one child (admin / 管理权). Sidebar lists that child’s
+   * children rather than the single root node itself.
+   */
+  _resolveMenuBranch(tree) {
+    const dp = L.env.dispatchpath || [];
+    const rp = L.env.requestpath || [];
+    const top = ui.menu.getChildren(tree);
+    let branchName = (rp.length && rp[0]) || (dp.length && dp[0]) || "admin";
+    let branch = null;
 
-    const items = Array.from(nav.querySelectorAll(":scope > li"));
-    if (!items.length) return;
-
-    let hideTimer = null;
-    let hasHovered = false;
-
-    const show = (li) => {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
+    for (let i = 0; i < top.length; i++) {
+      if (top[i].name === branchName) {
+        branch = top[i];
+        break;
       }
-      const navRect = nav.getBoundingClientRect();
-      const liRect = li.getBoundingClientRect();
+    }
 
-      if (!hasHovered) {
-        nav.classList.add("nav-hover-jump");
-        void nav.offsetWidth;
-      }
+    if (!branch && top.length === 1) {
+      branch = top[0];
+      branchName = branch.name;
+    }
 
-      nav.style.setProperty(
-        "--nav-hover-left",
-        `${liRect.left - navRect.left}px`,
-      );
-      nav.style.setProperty("--nav-hover-width", `${liRect.width}px`);
-      nav.classList.add("nav-hovering");
+    if (!branch) branch = tree;
 
-      if (!hasHovered) {
-        void nav.offsetWidth;
-        nav.classList.remove("nav-hover-jump");
-        hasHovered = true;
-      }
-    };
-
-    const hide = () => {
-      hideTimer = setTimeout(() => {
-        nav.classList.remove("nav-hovering");
-        hasHovered = false;
-      }, 80);
-    };
-
-    items.forEach((li) => {
-      li.addEventListener("mouseenter", () => show(li));
-    });
-    nav.addEventListener("mouseleave", hide);
+    return { branch, branchUrl: branch.name || branchName };
   },
 
-  initTabContentAnimation() {
-    const target = document.getElementById("maincontent") || document.body;
-    let animating = false;
+  /**
+   * Populates the empty server-rendered #sidebar shell with its chrome.
+   */
+  renderSidebarChrome() {
+    const sidebar = document.getElementById("sidebar");
+    if (!sidebar) return;
+    if (sidebar.getAttribute("data-outline-built") === "1") {
+      // Restored from cache — chrome exists; just sync a possibly stale hostname.
+      const brand = sidebar.querySelector(".sidebar-brand-text");
+      const host = sidebar.getAttribute("data-hostname");
+      if (brand && host && brand.textContent !== host) brand.textContent = host;
+      return;
+    }
+    sidebar.setAttribute("data-outline-built", "1");
 
-    /* ── Content blur animation (fade in / out) ── */
+    const media = this._mediaBase();
+    const host = sidebar.getAttribute("data-hostname") || "Outline";
 
-    target.addEventListener(
-      "click",
-      (e) => {
-        const link = e.target.closest(".cbi-tabmenu li a");
-        if (!link || animating || e._tabAnimBypass) return;
+    while (sidebar.firstChild) sidebar.removeChild(sidebar.firstChild);
 
-        const clickedLi = link.closest("li");
-        if (clickedLi?.classList.contains("cbi-tab")) return;
-
-        const tabMenu = link.closest(".cbi-tabmenu");
-        const section = tabMenu?.closest(".cbi-section, .cbi-map");
-        const activePanel = section?.querySelector(
-          "[data-tab-active='true'][data-tab-title]",
-        );
-
-        if (!activePanel) return;
-
-        e.stopPropagation();
-        e.preventDefault();
-        animating = true;
-
-        activePanel.classList.add("tab-content-exit");
-        activePanel.addEventListener(
-          "animationend",
-          () => {
-            activePanel.classList.remove("tab-content-exit");
-            animating = false;
-
-            const bypass = new MouseEvent("click", { bubbles: true });
-            bypass._tabAnimBypass = true;
-            link.dispatchEvent(bypass);
-          },
-          { once: true },
-        );
-      },
-      true,
+    // ChatGPT's sidebar: a 52px icon rail (home, one button per top-level
+    // section, logout at the foot) beside a 238px panel (title row with
+    // search + collapse, then the sections as labelled groups). Collapsing
+    // hides the panel and leaves the rail.
+    sidebar.appendChild(
+      E("div", { class: "sidebar-rail" }, [
+        E("a", { class: "sidebar-rail-home", href: "/", "aria-label": host }, [
+          E("img", {
+            class: "sidebar-logo",
+            src: `${media}/images/logo.png`,
+            alt: "",
+            width: "20",
+            height: "20",
+          }),
+          // Collapsed, the logo turns into the expand control on hover,
+          // as ChatGPT's does (sidebar-outline.js handles the click).
+          E("span", { class: "sidebar-rail-expand", "aria-hidden": "true" }, [
+            this._iconFile("panel-left-open", 20),
+          ]),
+        ]),
+        E("div", { class: "sidebar-rail-sep", role: "presentation" }),
+        E("nav", {
+          class: "sidebar-rail-nav",
+          id: "sidebar-rail-nav",
+          "aria-label": _("Navigation"),
+        }),
+        E("div", {
+          class: "sidebar-footer",
+          id: "sidebar-footer",
+          hidden: "",
+        }),
+      ]),
     );
 
-    new MutationObserver((mutations) => {
-      mutations.forEach((m) => {
-        if (
-          m.type === "attributes" &&
-          m.attributeName === "data-tab-active" &&
-          m.target.getAttribute("data-tab-active") === "true" &&
-          m.target.hasAttribute("data-tab-title")
-        ) {
-          m.target.classList.remove("tab-content-enter");
-          void m.target.offsetWidth;
-          m.target.classList.add("tab-content-enter");
-          m.target.addEventListener(
-            "animationend",
-            () => m.target.classList.remove("tab-content-enter"),
-            { once: true },
-          );
-        }
-      });
-    }).observe(target, {
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-tab-active"],
-    });
-
-    /* ── Container height animation (independent via ResizeObserver) ── */
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const el = entry.target;
-        if (el._htLock) continue;
-
-        const newH = Math.round(entry.borderBoxSize[0].blockSize);
-        const oldH = el._htPrev;
-        el._htPrev = newH;
-
-        if (oldH === undefined || oldH === newH) continue;
-
-        el._htLock = true;
-        el.classList.add("tab-height-anim");
-        el.style.height = oldH + "px";
-        void el.offsetWidth;
-        el.style.height = newH + "px";
-
-        const done = () => {
-          el.classList.remove("tab-height-anim");
-          el.style.height = "";
-          el._htLock = false;
-        };
-
-        const onEnd = (e) => {
-          if (e.propertyName !== "height") return;
-          el.removeEventListener("transitionend", onEnd);
-          clearTimeout(tid);
-          done();
-        };
-
-        el.addEventListener("transitionend", onEnd);
-        const tid = setTimeout(() => {
-          el.removeEventListener("transitionend", onEnd);
-          done();
-        }, 500);
-      }
-    });
-
-    const watch = (c) => {
-      if (c._htWatched) return;
-      c._htWatched = true;
-      ro.observe(c);
-    };
-
-    target
-      .querySelectorAll(".cbi-section-node-tabbed, .cbi-map-tabbed")
-      .forEach(watch);
-
-    /* ── View load animation (blur-in after spinner) ── */
-
-    const watchView = (v) => {
-      if (v._viewWatched) return;
-      v._viewWatched = true;
-
-      new MutationObserver((muts) => {
-        for (const m of muts) {
-          for (const n of m.removedNodes) {
-            if (!n.classList?.contains("spinning")) continue;
-            v.classList.remove("tab-content-enter");
-            void v.offsetWidth;
-            v.classList.add("tab-content-enter");
-            v.addEventListener(
-              "animationend",
-              () => v.classList.remove("tab-content-enter"),
-              { once: true },
-            );
-            return;
-          }
-        }
-      }).observe(v, { childList: true });
-    };
-
-    const view = document.getElementById("view");
-    if (view) watchView(view);
-
-    new MutationObserver((muts) => {
-      for (const m of muts) {
-        for (const n of m.addedNodes) {
-          if (n.nodeType !== 1) continue;
-          if (n.matches?.(".cbi-section-node-tabbed, .cbi-map-tabbed"))
-            watch(n);
-          n.querySelectorAll?.(".cbi-section-node-tabbed, .cbi-map-tabbed")
-            .forEach(watch);
-          if (n.id === "view") watchView(n);
-        }
-      }
-    }).observe(target, { childList: true, subtree: true });
-  },
-
-  initDescriptionPlacement() {
-    const move = () => {
-      document
-        .querySelectorAll(".cbi-value-field > .cbi-value-description")
-        .forEach((desc) => {
-          if (desc._aurMoved) return;
-          desc._aurMoved = true;
-          const row = desc.closest(".cbi-value");
-          if (!row) return;
-          const title = row.querySelector(".cbi-value-title");
-          if (title) {
-            title.appendChild(desc);
-          }
-        });
-    };
-
-    move();
-
-    const target = document.getElementById("maincontent") || document.body;
-    new MutationObserver(() => requestAnimationFrame(move)).observe(target, {
-      childList: true,
-      subtree: true,
-    });
-  },
-
-  closeAllDropdowns(except) {
-    // Close all outline-selects
-    document.querySelectorAll(".outline-select.open").forEach((s) => {
-      if (s !== except) s.classList.remove("open");
-    });
-    // Close all cbi-dropdowns
-    document.querySelectorAll(".cbi-dropdown[open]").forEach((d) => {
-      if (d !== except) d.removeAttribute("open");
-    });
-  },
-
-  initCustomSelects() {
-    const replace = (sel) => {
-      if (sel._outlineReplaced || sel.closest(".outline-select")) return;
-      sel._outlineReplaced = true;
-
-      const opts = Array.from(sel.options);
-      if (!opts.length) return;
-
-      const wrap = document.createElement("div");
-      wrap.className = "outline-select";
-      wrap.tabIndex = 0;
-      if (sel.disabled) wrap.classList.add("disabled");
-
-      const trigger = document.createElement("div");
-      trigger.className = "outline-select-trigger";
-
-      const val = document.createElement("span");
-      val.className = "outline-select-value";
-      val.textContent = sel.options[sel.selectedIndex]?.text || "";
-
-      const chevron = document.createElement("span");
-      chevron.className = "outline-select-chevron";
-
-      trigger.append(val, chevron);
-
-      const panel = document.createElement("div");
-      panel.className = "outline-select-panel";
-
-      const buildOptions = () => {
-        panel.innerHTML = "";
-        Array.from(sel.options).forEach((opt) => {
-          const item = document.createElement("div");
-          item.className =
-            "outline-select-option" +
-            (opt.index === sel.selectedIndex ? " selected" : "");
-          item.dataset.value = opt.value;
-          item.dataset.index = opt.index;
-          item.textContent = opt.text;
-          item.addEventListener("click", (e) => {
-            e.stopPropagation();
-            sel.selectedIndex = opt.index;
-            sel.dispatchEvent(new Event("change", { bubbles: true }));
-            val.textContent = opt.text;
-            panel
-              .querySelectorAll(".selected")
-              .forEach((o) => o.classList.remove("selected"));
-            item.classList.add("selected");
-            close();
-          });
-          panel.appendChild(item);
-        });
-      };
-
-      buildOptions();
-      wrap.append(trigger, panel);
-
-      sel.style.display = "none";
-      sel.insertAdjacentElement("afterend", wrap);
-
-      let isOpen = false;
-
-      const open = () => {
-        if (isOpen || sel.disabled) return;
-        this.closeAllDropdowns(wrap);
-        isOpen = true;
-        wrap.classList.add("open");
-        const rect = wrap.getBoundingClientRect();
-        const below = window.innerHeight - rect.bottom;
-        panel.classList.toggle("above", below < 200 && rect.top > 200);
-        const cur = panel.querySelector(".selected");
-        if (cur) cur.scrollIntoView({ block: "nearest" });
-      };
-
-      const close = () => {
-        if (!isOpen) return;
-        isOpen = false;
-        wrap.classList.remove("open");
-      };
-
-      trigger.addEventListener("click", (e) => {
-        e.stopPropagation();
-        isOpen ? close() : open();
-      });
-
-      document.addEventListener("click", (e) => {
-        if (!wrap.contains(e.target)) close();
-      });
-
-      wrap.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          isOpen ? close() : open();
-        } else if (e.key === "Escape") {
-          close();
-        } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-          e.preventDefault();
-          const items = Array.from(
-            panel.querySelectorAll(".outline-select-option"),
-          );
-          const cur = panel.querySelector(".outline-select-option.selected");
-          const idx = items.indexOf(cur);
-          const next =
-            e.key === "ArrowDown"
-              ? Math.min(idx + 1, items.length - 1)
-              : Math.max(idx - 1, 0);
-          if (items[next]) items[next].click();
-        }
-      });
-
-      // Sync if select changes externally
-      new MutationObserver(() => {
-        val.textContent = sel.options[sel.selectedIndex]?.text || "";
-        buildOptions();
-      }).observe(sel, { attributes: true, childList: true, subtree: true });
-    };
-
-    const replaceAll = () => {
-      document.querySelectorAll("select").forEach(replace);
-    };
-
-    replaceAll();
-
-    // Close outline-selects when cbi-dropdown opens
-    document.addEventListener("click", (e) => {
-      const openBtn = e.target.closest(".cbi-dropdown > .open");
-      if (openBtn) {
-        this.closeAllDropdowns(openBtn.closest(".cbi-dropdown"));
-      }
-    });
-
-    const target = document.getElementById("maincontent") || document.body;
-    new MutationObserver(() => {
-      requestAnimationFrame(replaceAll);
-    }).observe(target, { childList: true, subtree: true });
-  },
-
-  initMobileMenu() {
-    const overlay = document.querySelector("#mobile-menu-overlay");
-    const menuToggle = document.querySelector("#mobile-menu-btn");
-    const closeBtn = document.querySelector("#mobile-nav-close");
-
-    if (!menuToggle || !overlay) return;
-
-    menuToggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isOpen = overlay.classList.contains("mobile-menu-open");
-
-      overlay.classList.toggle("mobile-menu-open", !isOpen);
-      menuToggle.classList.toggle("active", !isOpen);
-      menuToggle.setAttribute("aria-expanded", !isOpen);
-      document.body.style.overflow = isOpen ? "" : "hidden";
-
-      if (isOpen) {
-        /* Reset mobile sidebar sections to default state when closing */
-        overlay
-          .querySelectorAll(".sidebar-section")
-          .forEach((sec) => {
-            const hasActive = sec.querySelector(".sidebar-link.active");
-            sec.classList.toggle("expanded", !!hasActive);
-          });
-      }
-    });
-
-    if (closeBtn) {
-      closeBtn.addEventListener("click", () => menuToggle.click());
-    }
-
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) menuToggle.click();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (
-        e.key === "Escape" &&
-        overlay.classList.contains("mobile-menu-open")
-      ) {
-        menuToggle.click();
-      }
-    });
-
-    /* Sidebar toggle clicks inside mobile panel are handled
-       by each toggle's own listener (set in renderMobileMenu),
-       using the same .expanded class + grid animation as desktop. */
-  },
-
-  renderMobileMenu(tree, url) {
-    const list = document.querySelector("#mobile-nav-list");
-    const children = ui.menu.getChildren(tree);
-
-    if (!list || !children.length) return;
-
-    list.innerHTML = "";
-
-    /* Reuse exact same DOM structure as desktop sidebar */
-    const sectionList = E("ul", { class: "sidebar-sections" });
-
-    children.forEach((category) => {
-      const subItems = ui.menu.getChildren(category);
-      if (!subItems.length) return;
-
-      const hasActive = category.name === L.env.dispatchpath[1];
-
-      /* Chevron SVG — identical to renderFullSidebar */
-      const chevron = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "svg",
-      );
-      chevron.setAttribute("viewBox", "0 0 16 16");
-      chevron.setAttribute("width", "16");
-      chevron.setAttribute("height", "16");
-      chevron.setAttribute("fill", "currentColor");
-      chevron.classList.add("sidebar-chevron");
-      const path = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "path",
-      );
-      path.setAttribute(
-        "d",
-        "M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z",
-      );
-      chevron.appendChild(path);
-
-      /* Toggle button */
-      const toggle = E(
-        "button",
-        { class: "sidebar-toggle" + (hasActive ? " active" : "") },
-        [_(category.title), chevron],
-      );
-
-      /* Sub-items list */
-      const ul = E("ul", { class: "sidebar-list" });
-
-      subItems.forEach((child) => {
-        const itemUrl = L.url(url, category.name, child.name);
-        const isActive =
-          category.name === L.env.dispatchpath[1] &&
-          child.name === L.env.dispatchpath[2];
-
-        ul.appendChild(
-          E("li", { class: "sidebar-item" + (isActive ? " active" : "") }, [
-            E(
-              "a",
-              {
-                class: "sidebar-link" + (isActive ? " active" : ""),
-                href: itemUrl,
-              },
-              [_(child.title)],
-            ),
+    const filterLabel = _("Type to filter…");
+    sidebar.appendChild(
+      E("div", { class: "sidebar-panel" }, [
+        E("div", { class: "sidebar-header" }, [
+          E("a", { class: "sidebar-brand", href: "/" }, [
+            E("span", { class: "sidebar-brand-text" }, [host]),
           ]),
-        );
-      });
-
-      /* Collapsible wrapper (grid trick — same as sidebar) */
-      const listWrapper = E("div", { class: "sidebar-list-wrapper" }, [ul]);
-
-      /* Section wrapper */
-      const section = E(
-        "li",
-        { class: "sidebar-section" + (hasActive ? " expanded" : "") },
-        [toggle, listWrapper],
-      );
-
-      /* Toggle click handler — same as sidebar */
-      toggle.addEventListener("click", () => {
-        section.classList.toggle("expanded");
-      });
-
-      sectionList.appendChild(section);
-    });
-
-    list.appendChild(sectionList);
+          // Command palette trigger: ChatGPT's search icon in the title row
+          // (initPalette binds it; the cached replay keeps it).
+          E(
+            "button",
+            {
+              id: "cmdk-trigger",
+              class: "cmdk-trigger sidebar-icon-btn",
+              type: "button",
+              "aria-label": filterLabel,
+            },
+            [this._iconFile("search", 20)],
+          ),
+          E(
+            "button",
+            {
+              id: "sidebar-toggle-btn",
+              class: "sidebar-toggle sidebar-icon-btn",
+              type: "button",
+              "aria-label": _("Navigation"),
+            },
+            [
+              E("span", { class: "icon-collapse" }, [
+                this._iconFile("panel-left-close", 20),
+              ]),
+              E("span", { class: "icon-expand" }, [
+                this._iconFile("panel-left-open", 20),
+              ]),
+            ],
+          ),
+        ]),
+        E("nav", { class: "sidebar-nav", id: "sidebar-nav" }),
+      ]),
+    );
   },
 
   render(tree) {
-    this.renderModeMenu(tree);
+    const { branch, branchUrl } = this._resolveMenuBranch(tree);
+    this.tree = tree;
+    this.branch = branch;
+    this.branchUrl = branchUrl;
 
-    if (L.env.dispatchpath.length >= 3) {
-      let node = tree;
-      let url = "";
-
-      for (let i = 0; i < 3 && node; i++) {
-        const segment = L.env.dispatchpath[i];
-        node = node.children?.[segment];
-        url += (url ? "/" : "") + segment;
-      }
-
-      if (node) this.renderTabMenu(node, url);
-    }
-
+    this.renderSidebarNav(branch, branchUrl);
+    this.renderBreadcrumb(branch, branchUrl);
+    this.initPalette(branch, branchUrl);
+    this.renderTabs(tree);
   },
 
-  renderTabMenu(tree, url, level = 0) {
-    const container = document.querySelector("#tabmenu");
+  renderTabs(tree) {
+    const dp = L.env.dispatchpath || [];
+    const tab = document.getElementById("tabmenu");
+    if (tab) {
+      tab.innerHTML = "";
+      tab.style.display = "none";
+    }
+
+    let node = tree;
+    let url = "";
+    if (dp.length >= 3) {
+      for (var i = 0; i < 3 && node; i++) {
+        const key = dp[i];
+        if (!node.children || !node.children[key]) break;
+        node = node.children[key];
+        url = url + (url ? "/" : "") + key;
+      }
+      if (node) this.renderTabMenu(node, url);
+    }
+  },
+
+  // Re-marks the sidebar, crumb and tabs from L.env after a same-document
+  // navigation (router-outline.js). The sidebar keeps its DOM; only the
+  // active highlight moves — the same longest-link-prefix rule header.ut's
+  // pre-paint replay applies to the cached markup.
+  syncRoute() {
+    if (!this.tree) return;
+
+    const sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+      sidebar
+        .querySelectorAll(".active")
+        .forEach((el) => el.classList.remove("active"));
+
+      const path = new URL(
+        L.url(...(L.env.dispatchpath || []).slice(0, 3)),
+        location.href,
+      ).pathname;
+      let best = null;
+      let bestLen = -1;
+      sidebar
+        .querySelectorAll(
+          "a.sidebar-sub-link, a.sidebar-nav-parent, a.sidebar-logout",
+        )
+        .forEach((a) => {
+          const p = a.pathname;
+          if ((path === p || path.startsWith(p + "/")) && p.length > bestLen) {
+            best = a;
+            bestLen = p.length;
+          }
+        });
+
+      if (best) {
+        const sub = best.closest(".sidebar-sub-item");
+        if (sub) {
+          sub.classList.add("active");
+          const acc = best.closest(".sidebar-accordion-item");
+          if (acc) {
+            acc.classList.add("active");
+          }
+        } else if (best.classList.contains("sidebar-logout")) {
+          best.classList.add("active");
+        } else {
+          best.closest(".sidebar-nav-item")?.classList.add("active");
+        }
+        const section = best
+          .closest("[data-section]")
+          ?.getAttribute("data-section");
+        if (section) {
+          sidebar
+            .querySelector(`.sidebar-rail-item[data-section="${section}"]`)
+            ?.classList.add("active");
+          this._showSection(section);
+        }
+      }
+    }
+
+    this.renderBreadcrumb(this.branch, this.branchUrl);
+    this.renderTabs(this.tree);
+  },
+
+  closeSurfaces() {
+    this.closePalette();
+    window.OutlineSidebar?.closeDrawer?.();
+    window.OutlineSidebar?._hideCollapsedPopover?.();
+  },
+
+  /**
+   * Two levels under the active branch (e.g. admin): 状态 → 概览…
+   * Capped at l <= 2; anything deeper renders in #tabmenu.
+   */
+  renderSidebarNav(branch, branchUrl) {
+    const nav = document.getElementById("sidebar-nav");
+    const rail = document.getElementById("sidebar-rail-nav");
+    const foot = document.getElementById("sidebar-footer");
+    if (!nav) return;
+
+    const children = ui.menu.getChildren(branch);
+    const dp = L.env.dispatchpath || [];
+    const closeDrawer = () => window.OutlineSidebar?.closeDrawer?.();
+
+    // If header.ut replayed the cached sidebar, this rebuild is a silent
+    // refresh — keep the panel's scroll position.
+    const restored =
+      document
+        .getElementById("sidebar")
+        ?.getAttribute("data-outline-restored") === "1";
+    const savedScrollTop = restored ? nav.scrollTop : 0;
+
+    nav.innerHTML = "";
+    if (rail) rail.innerHTML = "";
+    if (foot) {
+      foot.innerHTML = "";
+      foot.hidden = true;
+    }
+
+    children.forEach((section) => {
+      const isActive = dp[1] == section.name;
+      const title = _(section.title);
+
+      if (this._isLogoutMenuItem(section) && foot) {
+        foot.appendChild(
+          E(
+            "a",
+            {
+              class: "sidebar-logout" + (isActive ? " active" : ""),
+              href: L.url(branchUrl, section.name),
+              "aria-label": title,
+              onclick: closeDrawer,
+            },
+            [
+              E("span", { class: "sidebar-icon", "aria-hidden": "true" }, [
+                this._sectionIcon(section.name, 20),
+              ]),
+              E("span", { class: "sidebar-label" }, [title]),
+            ],
+          ),
+        );
+        foot.hidden = false;
+        return;
+      }
+
+      const subs = ui.menu.getChildren(section);
+      const href = subs.length
+        ? L.url(branchUrl, section.name, subs[0].name)
+        : L.url(branchUrl, section.name);
+
+      // Rail: one icon button per section, ink when it holds the page.
+      rail?.appendChild(
+        E(
+          "a",
+          {
+            class: "sidebar-rail-item" + (isActive ? " active" : ""),
+            href,
+            "data-section": section.name,
+            "aria-label": title,
+          },
+          [this._sectionIcon(section.name, 20)],
+        ),
+      );
+
+      if (subs.length === 0) {
+        nav.appendChild(
+          E(
+            "div",
+            {
+              class: "sidebar-nav-item" + (isActive ? " active" : ""),
+              "data-section": section.name,
+            },
+            [
+              E(
+                "a",
+                {
+                  class: "sidebar-nav-parent no-sub",
+                  href,
+                  onclick: closeDrawer,
+                },
+                [
+                  E("span", { class: "sidebar-icon", "aria-hidden": "true" }, [
+                    this._sectionIcon(section.name, 20),
+                  ]),
+                  E("span", { class: "sidebar-label" }, [title]),
+                ],
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      nav.appendChild(
+        E(
+          "div",
+          {
+            class: "sidebar-accordion-item" + (isActive ? " active" : ""),
+            "data-open": "true",
+            "data-section": section.name,
+          },
+          [
+            // ChatGPT's group label ("Projects", "Recents"): the panel shows
+            // one section at a time, picked on the rail, so it only names it.
+            E("div", { class: "sidebar-group-label" }, [
+              E("span", { class: "sidebar-label" }, [title]),
+            ]),
+            E("div", { class: "sidebar-accordion-sub" }, [
+              E(
+                "ul",
+                { class: "sidebar-sub-list" },
+                subs.map((page) =>
+                  E(
+                    "li",
+                    {
+                      class:
+                        "sidebar-sub-item" +
+                        (isActive && dp[2] == page.name ? " active" : ""),
+                    },
+                    [
+                      E(
+                        "a",
+                        {
+                          class: "sidebar-sub-link",
+                          href: L.url(branchUrl, section.name, page.name),
+                          onclick: closeDrawer,
+                        },
+                        [_(page.title)],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ]),
+          ],
+        ),
+      );
+    });
+
+    this._showSection(
+      dp[1] && nav.querySelector(`[data-section="${dp[1]}"]`)
+        ? dp[1]
+        : nav.querySelector("[data-section]")?.getAttribute("data-section"),
+    );
+
+    // A long section can put the current page outside the panel's
+    // view (fresh build, or a restored scroll from the previous page):
+    // bring it into the upper third.
+    if (restored) nav.scrollTop = savedScrollTop;
+    const current = nav.querySelector(".sidebar-sub-item.active");
+    if (
+      current &&
+      (current.offsetTop < nav.scrollTop ||
+        current.offsetTop + current.offsetHeight >
+          nav.scrollTop + nav.clientHeight)
+    )
+      nav.scrollTop = current.offsetTop - nav.clientHeight / 3;
+  },
+
+  /**
+   * The panel shows one section at a time (ChatGPT-style): mark it and its
+   * rail button. sidebar-outline.js switches it from the rail.
+   */
+  _showSection(section) {
+    const sidebar = document.getElementById("sidebar");
+    if (!sidebar || !section) return;
+    sidebar
+      .querySelectorAll(".is-shown")
+      .forEach((el) => el.classList.remove("is-shown"));
+    sidebar
+      .querySelectorAll(`[data-section="${section}"]`)
+      .forEach((el) => el.classList.add("is-shown"));
+  },
+
+  /**
+   * Command palette (⌘K), replaces the C1 topbar route search. One panel
+   * serves navigation (the same two-level model the sidebar renders) and
+   * the ">" command scope — theme modes plus logout; the modes are the
+   * only UI able to return to 'device' once the header toggle has written
+   * an explicit mode.
+   * DOM is built lazily on first open; page load binds one trigger click
+   * and one keydown listener.
+   * Translation caveat: the dispatcher load_catalog()s the whole
+   * /usr/lib/lua/luci/i18n dir into one flat table, so a msgid resolves
+   * only if some *installed* package defines it. The theme ships no
+   * catalog, so every string here is an existing msgid: luci-base ones
+   * are guaranteed, and 'Type to filter…' comes from
+   * luci-app-package-manager, a dependency of the default luci
+   * collection. Light/Dark are the sole holdouts — no LuCI pot defines
+   * them, so they stay English until someone gives the theme a po.
+   */
+  initPalette(branch, branchUrl) {
+    const trigger = document.getElementById("cmdk-trigger");
+    if (!trigger || this.palIndex) return;
+
+    this.palIndex = [];
+    this.palAliases = {};
+    ui.menu.getChildren(branch).forEach((section) => {
+      const subs = ui.menu.getChildren(section);
+      if (subs.length === 0) {
+        this.palIndex.push({
+          title: _(section.title),
+          group: null,
+          icon: section.name,
+          path: `${branchUrl}/${section.name}`,
+          href: L.url(branchUrl, section.name),
+          isLogout: this._isLogoutMenuItem(section),
+        });
+        return;
+      }
+      subs.forEach((page) => {
+        const title = _(page.title);
+        const group = _(section.title);
+        const path = `${branchUrl}/${section.name}/${page.name}`;
+        // The raw node: getChildren() hands out alias nodes carrying their
+        // target's children, which would hide an alias parent's tabs.
+        const node = section.children?.[page.name] ?? {};
+        const tabs = ui.menu.getChildren(node);
+        const type = node.action?.type;
+        const target =
+          type === "alias"
+            ? node.action.path.replace(`${path}/`, "")
+            : type === "firstchild" &&
+              tabs.find((tab) => !tab.firstchild_ineligible)?.name;
+
+        // A parent that only redirects to one of its tabs is that tab: its
+        // row gives way to the tabs, and its path (stored by older recents)
+        // resolves to where it redirects.
+        if (tabs.some((tab) => tab.name === target))
+          this.palAliases[path] = `${path}/${target}`;
+        else
+          this.palIndex.push({
+            title,
+            group,
+            icon: section.name,
+            path,
+            href: L.url(branchUrl, section.name, page.name),
+            isLogout: false,
+          });
+
+        tabs.forEach((tab) =>
+          this.palIndex.push({
+            title: _(tab.title),
+            parent: title,
+            group,
+            icon: section.name,
+            path: `${path}/${tab.name}`,
+            href: L.url(branchUrl, section.name, page.name, tab.name),
+            isLogout: false,
+          }),
+        );
+      });
+    });
+
+    // luci-base carries no mode msgids, so the labels borrow
+    // luci-app-aurora-config's already-translated "Light Mode"/"Dark Mode" —
+    // matching its msgids verbatim is what makes the palette follow the UI
+    // language wherever the config app is installed, and they fall back to
+    // English where it isn't.
+    this.palModes = [
+      { mode: "light", title: _("Light Mode"), iconFile: "sun" },
+      { mode: "dark", title: _("Dark Mode"), iconFile: "moon" },
+      { mode: "device", title: _("Automatic"), iconFile: "monitor" },
+    ];
+
+    const isMac = /Mac|iP(ad|hone|od)/.test(navigator.platform);
+    trigger.setAttribute("aria-keyshortcuts", isMac ? "Meta+K" : "Control+K");
+    trigger.addEventListener("click", () => this.openPalette());
+
+    document.addEventListener("keydown", (e) => {
+      // An IME swallows these keys while composing; keyCode 229 covers
+      // engines that don't set isComposing on the trailing keydown.
+      if (e.isComposing || e.keyCode === 229) return;
+      // Only the advertised shortcut — ⌘K on Mac, Ctrl+K elsewhere — so
+      // macOS Ctrl+K (kill-to-end-of-line in text fields) keeps working.
+      if (
+        (isMac ? e.metaKey : e.ctrlKey) &&
+        !e.altKey &&
+        !e.shiftKey &&
+        (e.key || "").toLowerCase() === "k"
+      ) {
+        e.preventDefault();
+        if (this.palOverlay && !this.palOverlay.hidden) this.closePalette();
+        else this.openPalette();
+      } else if (
+        e.key === "Escape" &&
+        this.palOverlay &&
+        !this.palOverlay.hidden
+      ) {
+        this.closePalette();
+      }
+    });
+  },
+
+  openPalette() {
+    if (!this.palOverlay) this._buildPalette();
+    // Remember what had focus so closing returns the caret where the user
+    // left it — ⌘K can fire from anywhere, not just the trigger.
+    const from = document.activeElement;
+    this.palReturn =
+      from && from !== document.body && !this.palOverlay.contains(from)
+        ? from
+        : null;
+    this.palOverlay.hidden = false;
+    this._renderPalette();
+    this.palInput.focus();
+    this.palInput.select();
+  },
+
+  closePalette() {
+    if (!this.palOverlay || this.palOverlay.hidden) return;
+    this.palOverlay.hidden = true;
+    this.palInput.value = "";
+    // Next open starts from "All", as ChatGPT's search does.
+    this.palFilter = null;
+    this.palFilters
+      ?.querySelectorAll(".cmdk-filter")
+      .forEach((b, i) => b.setAttribute("aria-pressed", String(i === 0)));
+    // Hand focus back so a ⌘K → esc round-trip doesn't strand the caret.
+    const back = this.palReturn || document.getElementById("cmdk-trigger");
+    this.palReturn = null;
+    if (back && back.isConnected) back.focus();
+  },
+
+  _buildPalette() {
+    this.palInput = E("input", {
+      class: "cmdk-input",
+      type: "text",
+      placeholder: _("Type to filter…"),
+      // A placeholder is not an accessible name — it is dropped once the
+      // field has text. Same msgid as the placeholder, so no new string.
+      "aria-label": _("Type to filter…"),
+      // Combobox pattern: focus stays in this field the whole time, so the
+      // row that ↑/↓ and Enter act on is named by aria-activedescendant
+      // rather than by moving focus onto it.
+      role: "combobox",
+      "aria-expanded": "true",
+      "aria-controls": "cmdk-list",
+      "aria-autocomplete": "list",
+      autocomplete: "off",
+      spellcheck: "false",
+      enterkeyhint: "go",
+    });
+    this.palInput.addEventListener("input", () => this._renderPalette());
+    this.palInput.addEventListener("keydown", (e) => {
+      // Mid-composition these keys belong to the IME: Enter commits the
+      // buffer and arrows move inside the candidate list.
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        this._palMove(e.key === "ArrowDown" ? 1 : -1);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        this.palList.querySelector(".is-selected")?.click();
+      }
+    });
+
+    // ChatGPT's search row: the field, then "Clear" (only once there is
+    // text), a hairline and the close button.
+    const clear = E("button", { class: "cmdk-clear", type: "button" }, [
+      _("Clear"),
+    ]);
+    clear.addEventListener("click", () => {
+      this.palInput.value = "";
+      this._renderPalette();
+      this.palInput.focus();
+    });
+
+    const cancel = E("button", {
+      class: "cmdk-cancel",
+      type: "button",
+      "aria-label": _("Close"),
+      title: _("Close"),
+    });
+    cancel.addEventListener("click", () => this.closePalette());
+
+    // Filter pills: All + one per menu section, ChatGPT's All / Chats /
+    // Images row. A pick narrows the list to that section's pages.
+    this.palFilter = null;
+    const groups = [
+      ...new Set(this.palIndex.map((page) => page.group).filter(Boolean)),
+    ];
+    const pill = (label, group) => {
+      const btn = E(
+        "button",
+        {
+          class: "cmdk-filter",
+          type: "button",
+          "aria-pressed": group === this.palFilter ? "true" : "false",
+          tabindex: "-1",
+        },
+        [label],
+      );
+      btn.addEventListener("click", () => {
+        this.palFilter = group;
+        this.palFilters
+          .querySelectorAll(".cmdk-filter")
+          .forEach((b) => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        this._renderPalette();
+        this.palInput.focus();
+      });
+      return btn;
+    };
+    this.palFilters = E("div", { class: "cmdk-filters" }, [
+      pill(_("All"), null),
+      ...groups.map((group) => pill(group, group)),
+    ]);
+
+    this.palList = E("div", {
+      id: "cmdk-list",
+      class: "cmdk-list",
+      role: "listbox",
+      "aria-label": _("Navigation"),
+    });
+    // mousemove, not mouseover: scrollIntoView() slides rows under a
+    // stationary pointer, which fires mouseover and would snap the
+    // selection back to whatever the mouse happens to rest on.
+    this.palList.addEventListener("mousemove", (e) => {
+      const row = e.target?.closest?.(".cmdk-row");
+      if (row && !row.classList.contains("is-selected")) this._palSelect(row);
+    });
+
+    const panel = E(
+      "div",
+      {
+        class: "cmdk-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": _("Navigation"),
+      },
+      [
+        E("div", { class: "cmdk-inputrow" }, [
+          this.palInput,
+          clear,
+          E("span", { class: "cmdk-sep", role: "presentation" }),
+          cancel,
+        ]),
+        this.palFilters,
+        this.palList,
+      ],
+    );
+
+    // aria-modal states the intent but does not stop Tab from walking into
+    // the obscured page. Rows sit outside the tab order (tabindex -1), so
+    // the cycle is just the input row's controls — Clear stays away while
+    // the field is empty and Cancel is <md-only, hence offsetParent.
+    panel.addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      const ring = [this.palInput, clear, cancel].filter(
+        (el) => el.offsetParent !== null,
+      );
+      if (!ring.length) return;
+      e.preventDefault();
+      const at = ring.indexOf(document.activeElement);
+      ring[(at + (e.shiftKey ? -1 : 1) + ring.length) % ring.length].focus();
+    });
+
+    this.palOverlay = E("div", { id: "cmdk-overlay", hidden: "" }, [panel]);
+    this.palOverlay.addEventListener("pointerdown", (e) => {
+      if (e.target === this.palOverlay) this.closePalette();
+    });
+    document.body.appendChild(this.palOverlay);
+  },
+
+  /**
+   * localStorage can be unavailable (privacy modes) or hold anything after
+   * a downgrade — both read as "no history". No size cap: dedupe bounds the
+   * list by the pages actually visited, i.e. the menu's own scale.
+   */
+  _palReadRecents() {
+    try {
+      const list = JSON.parse(localStorage.getItem(RECENTS_KEY));
+      if (!Array.isArray(list)) return [];
+      return [
+        ...new Set(
+          list
+            .filter((path) => typeof path === "string")
+            .map((path) => this.palAliases?.[path] ?? path),
+        ),
+      ];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  _palRecordRecent(path) {
+    try {
+      localStorage.setItem(
+        RECENTS_KEY,
+        JSON.stringify([
+          path,
+          ...this._palReadRecents().filter((kept) => kept !== path),
+        ]),
+      );
+    } catch (e) {
+      // History is decorative; a sealed or full store just means none.
+    }
+  },
+
+  /**
+   * Pure LRU browse order: every visited page floats above the untouched
+   * ones, so long use converges on a fully most-recently-used list while
+   * unvisited pages keep menu order below (the sort is spec-stable). Paths
+   * that vanished from the menu drop out. Logout is a command, not a
+   * destination: it stays out of the browse list entirely and rides ">"
+   * instead (see _renderPalette) — but a typed query still reaches it.
+   */
+  _palBrowsePages() {
+    const recents = this._palReadRecents().filter((path) =>
+      this.palIndex.some((page) => page.path === path && !page.isLogout),
+    );
+    const rank = (page) => {
+      const at = recents.indexOf(page.path);
+      return at < 0 ? 0 : recents.length - at;
+    };
+    return this.palIndex
+      .filter((page) => !page.isLogout)
+      .sort((a, b) => rank(b) - rank(a));
+  },
+
+  _renderPalette() {
+    const trimmed = this.palInput.value.trimStart();
+    const cmdOnly = trimmed.startsWith(">");
+    const q = (cmdOnly ? trimmed.slice(1) : trimmed).trim().toLowerCase();
+    const themeNow = localStorage.getItem("outline.theme") || "device";
+
+    // A section pill narrows everything to that section's pages; the
+    // theme commands only show under "All".
+    const filter = cmdOnly ? null : this.palFilter;
+    const inFilter = (page) => !filter || page.group === filter;
+
+    let rows;
+    if (q) {
+      const hits = [];
+      // ">" scopes to command rows — the theme modes plus logout.
+      const pool = cmdOnly
+        ? this.palIndex.filter((page) => page.isLogout)
+        : this.palIndex.filter(inFilter);
+      pool.forEach((page) => {
+        const m = this._palScore(
+          q,
+          page.title,
+          page.path,
+          page.group,
+          page.parent,
+        );
+        if (m)
+          hits.push({
+            score: m.score,
+            node: this._palPageRow(
+              page,
+              m.ranges,
+              m.groupRanges,
+              m.parentRanges,
+            ),
+          });
+      });
+      if (!filter)
+        this.palModes.forEach((cmd) => {
+          const m = this._palScore(q, cmd.title, `theme ${cmd.mode}`);
+          if (m)
+            hits.push({
+              score: m.score,
+              node: this._palModeRow(cmd, themeNow, m.ranges),
+            });
+        });
+      hits.sort((a, b) => b.score - a.score);
+      rows = hits.map((h) => h.node);
+    } else {
+      rows = [];
+      if (!cmdOnly) {
+        // Everything above Design is navigation — a "Navigation" heading
+        // restated the obvious and was dropped with the per-row breadcrumb.
+        this._palBrowsePages()
+          .filter(inFilter)
+          .forEach((page) => rows.push(this._palPageRow(page, null)));
+      }
+      // role=presentation: a listbox owns options, and this heading is
+      // decoration — it just fences the theme commands off the page rows.
+      if (!filter) {
+        rows.push(
+          E("div", { class: "cmdk-group", role: "presentation" }, [
+            _("Design"),
+          ]),
+        );
+        this.palModes.forEach((cmd) =>
+          rows.push(this._palModeRow(cmd, themeNow, null)),
+        );
+      }
+      // Logout rides ">" only, last after the modes — a command, not a
+      // destination (mirrors luci-theme-aurora's palette).
+      if (cmdOnly) {
+        const logout = this.palIndex.find((page) => page.isLogout);
+        if (logout) rows.push(this._palPageRow(logout, null));
+      }
+    }
+
+    if (!rows.length)
+      rows = [
+        E("div", { class: "cmdk-empty", role: "presentation" }, [
+          _("No entries available"),
+        ]),
+      ];
+
+    this.palList.replaceChildren(...rows);
+    this.palList.scrollTop = 0;
+    // aria-activedescendant points at an id, and the list is rebuilt on
+    // every keystroke, so hand out ids fresh alongside the rows.
+    const built = this.palList.querySelectorAll(".cmdk-row");
+    built.forEach((row, i) => (row.id = `cmdk-row-${i}`));
+    if (built.length) this._palSelect(built[0]);
+    else this.palInput.removeAttribute("aria-activedescendant");
+  },
+
+  _palPageRow(page, ranges, groupRanges, parentRanges) {
+    // Title leads, the section label is demoted to small type on the right
+    // edge — same row anatomy as luci-theme-aurora's palette, so the two
+    // themes stay legible side by side. The dispatch path is matchable but
+    // no longer rendered: it earned its keep as orientation, not as a
+    // per-row caption. tabindex -1: rows are reached with ↑/↓, which keeps
+    // the panel's tab cycle short enough to contain (see _buildPalette).
+    // option/aria-selected is how that selection reaches assistive tech.
+    const row = E(
+      "a",
+      {
+        class: "cmdk-row",
+        href: page.href,
+        role: "option",
+        "aria-selected": "false",
+        tabindex: "-1",
+      },
+      [
+        // ChatGPT's search row: 32px icon slot, title over a secondary
+        // line (the section), grid-laid in _palette.css.
+        E("span", { class: "cmdk-icon", "aria-hidden": "true" }, [
+          this._sectionIcon(page.icon, 20),
+        ]),
+        E(
+          "span",
+          { class: "cmdk-title" },
+          // A tab named after its parent is the page the parent opens.
+          page.parent && page.parent !== page.title
+            ? [
+                E(
+                  "span",
+                  { class: "cmdk-parent" },
+                  this._palMark(page.parent, parentRanges),
+                ),
+                E(
+                  "span",
+                  { class: "cmdk-label" },
+                  this._palMark(page.title, ranges),
+                ),
+              ]
+            : this._palMark(page.title, ranges),
+        ),
+        page.group
+          ? E(
+              "span",
+              { class: "cmdk-group-name" },
+              this._palMark(page.group, groupRanges),
+            )
+          : "",
+      ],
+    );
+    if (page.isLogout)
+      row.addEventListener("click", () => {
+        // Same contract as header.ut's delegated a.sidebar-logout listener:
+        // logging out drops the cached sidebar and suppresses re-caching.
+        window.outlineSuppressSidebarCache = true;
+        try {
+          sessionStorage.removeItem("outline.sidebar.cache");
+        } catch (e) {}
+      });
+    else
+      // Remember the pick, then let the click navigate (router or full
+      // load) untouched.
+      row.addEventListener("click", () => this._palRecordRecent(page.path));
+    return row;
+  },
+
+  _palModeRow(cmd, themeNow, ranges) {
+    const active = themeNow === cmd.mode;
+    const row = E(
+      "button",
+      {
+        class: "cmdk-row cmdk-cmd",
+        type: "button",
+        role: "option",
+        "aria-selected": "false",
+        tabindex: "-1",
+        "data-mode": cmd.mode,
+      },
+      [
+        E("span", { class: "cmdk-icon", "aria-hidden": "true" }, [
+          this._iconFile(cmd.iconFile, 20),
+        ]),
+        E("span", { class: "cmdk-title" }, this._palMark(cmd.title, ranges)),
+        active ? E("span", { class: "cmdk-check", "aria-hidden": "true" }) : "",
+      ],
+    );
+    row.addEventListener("click", () => {
+      window.OutlineSidebar?.applyTheme?.(cmd.mode);
+      // Palette stays open: the ✓ moves and the skin flips live. The list
+      // is rebuilt, so re-select this command — the selection must not
+      // snap back to the first row after an Enter.
+      this._renderPalette();
+      // A mouse click focuses the button, which the rebuild above then
+      // discards, stranding focus on <body> outside the panel's tab cycle.
+      // Focus belongs in the field anyway — that is where Enter is read.
+      this.palInput.focus();
+      const again = this.palList.querySelector(
+        `.cmdk-row[data-mode="${cmd.mode}"]`,
+      );
+      if (again) this._palSelect(again);
+    });
+    return row;
+  },
+
+  /**
+   * Subsequence scorer: every query char must appear in order; consecutive
+   * runs and word/segment starts weigh extra. Title hits rank first, then a
+   * tab's parent — scored alone so its tabs tie and keep menu order, or
+   * paired with the title when the query splits on a space — then the
+   * section label, then the language-neutral path, where each query word
+   * (split on spaces or "/") lands inside one segment, in path order, so a
+   * lone word can't scatter across segments. Title, parent and label hits
+   * highlight the field they matched; a path hit ranks without highlighting.
+   */
+  _palScore(q, title, path, group, parent) {
+    const t = this._palSub(q, title.toLowerCase());
+    if (t) return { score: t.score + 10, ranges: t.ranges, groupRanges: null };
+    if (parent) {
+      const low = parent.toLowerCase();
+      const pt = this._palSub(q, low);
+      if (pt)
+        return {
+          score: pt.score + 7,
+          ranges: null,
+          groupRanges: null,
+          parentRanges: pt.ranges,
+        };
+      const words = q.split(/\s+/);
+      for (let i = 1; i < words.length; i++) {
+        const head = this._palSub(words.slice(0, i).join(" "), low);
+        const tail =
+          head && this._palSub(words.slice(i).join(" "), title.toLowerCase());
+        if (tail)
+          return {
+            score: head.score + tail.score + 7,
+            ranges: tail.ranges,
+            groupRanges: null,
+            parentRanges: head.ranges,
+          };
+      }
+    }
+    // On a localized instance the section label is the only group name the
+    // user ever sees: querying the translated 'Network' must reach its rows.
+    const g = group ? this._palSub(q, group.toLowerCase()) : null;
+    if (g) return { score: g.score + 5, ranges: null, groupRanges: g.ranges };
+    const p = this._palPath(q, String(path || "").toLowerCase());
+    return p ? { score: p.score, ranges: null, groupRanges: null } : null;
+  },
+
+  _palPath(q, low) {
+    const words = q.split(/[\s/]+/).filter(Boolean);
+    const segments = low.split("/");
+    let at = 0;
+    let score = 0;
+    for (const word of words) {
+      let hit = null;
+      for (; at < segments.length; at++) {
+        hit = this._palSub(word, segments[at]);
+        if (hit) break;
+      }
+      if (!hit) return null;
+      score += hit.score;
+    }
+    return words.length ? { score } : null;
+  },
+
+  _palSub(q, low) {
+    let ti = 0;
+    let score = 0;
+    let run = 0;
+    const ranges = [];
+    for (let qi = 0; qi < q.length; qi++) {
+      const c = q[qi];
+      if (c === " ") {
+        run = 0;
+        continue;
+      }
+      const at = low.indexOf(c, ti);
+      if (at < 0) return null;
+      run = at === ti && qi > 0 ? run + 1 : 1;
+      score +=
+        run + (at === 0 || low[at - 1] === " " || low[at - 1] === "/" ? 3 : 0);
+      if (ranges.length && ranges[ranges.length - 1][1] === at)
+        ranges[ranges.length - 1][1] = at + 1;
+      else ranges.push([at, at + 1]);
+      ti = at + 1;
+    }
+    return { score: score - low.length * 0.02, ranges };
+  },
+
+  _palMark(title, ranges) {
+    // Case folding can change string length ("İ" → "i̇"), skewing offsets
+    // into the original — skip highlighting rather than mis-slice.
+    if (!ranges || title.toLowerCase().length !== title.length) return [title];
+    const out = [];
+    let last = 0;
+    ranges.forEach(([a, b]) => {
+      if (a > last) out.push(title.slice(last, a));
+      out.push(E("mark", {}, [title.slice(a, b)]));
+      last = b;
+    });
+    if (last < title.length) out.push(title.slice(last));
+    return out;
+  },
+
+  _palSelect(row) {
+    const prev = this.palList.querySelector(".is-selected");
+    if (prev) {
+      prev.classList.remove("is-selected");
+      prev.setAttribute("aria-selected", "false");
+    }
+    row.classList.add("is-selected");
+    row.setAttribute("aria-selected", "true");
+    this.palInput.setAttribute("aria-activedescendant", row.id);
+  },
+
+  _palMove(delta) {
+    const rows = [...this.palList.querySelectorAll(".cmdk-row")];
+    if (!rows.length) return;
+    const current = rows.findIndex((r) => r.classList.contains("is-selected"));
+    const next = rows[(current + delta + rows.length) % rows.length];
+    this._palSelect(next);
+    next.scrollIntoView({ block: "nearest" });
+  },
+
+  renderBreadcrumb(branch, branchUrl) {
+    const crumb = document.getElementById("topbar-breadcrumb");
+    if (!crumb) return;
+
+    crumb.innerHTML = "";
+
+    const dp = L.env.dispatchpath || [];
+    const activeSection = dp[1] || "";
+    const activePage = dp[2] || "";
+
+    const ch = branch.children || {};
+    const sectionNode = ch[activeSection];
+    const pageNode =
+      sectionNode && sectionNode.children
+        ? sectionNode.children[activePage]
+        : null;
+
+    if (sectionNode) {
+      crumb.appendChild(
+        E("span", { class: "breadcrumb-item" }, [_(sectionNode.title)]),
+      );
+    }
+    if (pageNode) {
+      crumb.appendChild(
+        E("span", { class: "breadcrumb-sep" }, [
+          this._iconFile("chevron-right", 14),
+        ]),
+      );
+      crumb.appendChild(
+        E("span", { class: "breadcrumb-item active" }, [_(pageNode.title)]),
+      );
+    }
+  },
+
+  /** Recursive tab rows for menu levels below the sidebar’s two. */
+  renderTabMenu(tree, url, level) {
+    const container = document.getElementById("tabmenu");
+    if (!container) return;
+
+    const l = (level || 0) + 1;
     const ul = E("ul", { class: "tabs" });
     const children = ui.menu.getChildren(tree);
     let activeNode = null;
 
+    if (children.length === 0) return;
+
+    const dp = L.env.dispatchpath || [];
+
     children.forEach((child) => {
-      const isActive = L.env.dispatchpath[3 + level] === child.name;
+      const isActive = dp[l + 2] == child.name;
+      const activeClass = isActive ? " active" : "";
+      const className = "tabmenu-item-%s %s".format(child.name, activeClass);
 
       ul.appendChild(
-        E(
-          "li",
-          {
-            class: `tabmenu-item-${child.name}${isActive ? " active" : ""}`,
-          },
-          [E("a", { href: L.url(url, child.name) }, [_(child.title)])],
-        ),
+        E("li", { class: className }, [
+          E("a", { href: L.url(url, child.name) }, [_(child.title)]),
+        ]),
       );
 
       if (isActive) activeNode = child;
     });
 
-    if (!ul.children.length) return E([]);
-
     container.appendChild(ul);
     container.style.display = "";
 
-    if (activeNode) {
-      this.renderTabMenu(activeNode, `${url}/${activeNode.name}`, level + 1);
-    }
+    if (activeNode)
+      this.renderTabMenu(activeNode, url + "/" + activeNode.name, l);
 
     return ul;
   },
 
-  renderMainMenu(tree, url) {
-    const sidebar = document.querySelector("#sidebar");
-    const children = ui.menu.getChildren(tree);
-
-    if (!children.length || !sidebar) return;
-
-    /* All navigation goes to sidebar with section groups */
-    this.renderFullSidebar(children, url, sidebar);
-  },
-
-  renderFullSidebar(categories, baseUrl, sidebar) {
-    const nav = E("nav", { class: "sidebar-nav" });
-    const sectionList = E("ul", { class: "sidebar-sections" });
-
-    categories.forEach((category) => {
-      const subItems = ui.menu.getChildren(category);
-      if (!subItems.length) return;
-
-      const hasActive = category.name === L.env.dispatchpath[1];
-
-      /* Chevron SVG */
-      const chevron = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "svg",
-      );
-      chevron.setAttribute("viewBox", "0 0 16 16");
-      chevron.setAttribute("width", "16");
-      chevron.setAttribute("height", "16");
-      chevron.setAttribute("fill", "currentColor");
-      chevron.classList.add("sidebar-chevron");
-      const path = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "path",
-      );
-      path.setAttribute(
-        "d",
-        "M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z",
-      );
-      chevron.appendChild(path);
-
-      /* Toggle button */
-      const toggle = E(
-        "button",
-        { class: "sidebar-toggle" + (hasActive ? " active" : "") },
-        [_(category.title), chevron],
-      );
-
-      /* Sub-items list */
-      const ul = E("ul", { class: "sidebar-list" });
-
-      subItems.forEach((child) => {
-        const isActive =
-          category.name === L.env.dispatchpath[1] &&
-          child.name === L.env.dispatchpath[2];
-
-        ul.appendChild(
-          E("li", { class: "sidebar-item" + (isActive ? " active" : "") }, [
-            E(
-              "a",
-              {
-                class: "sidebar-link" + (isActive ? " active" : ""),
-                href: L.url(baseUrl, category.name, child.name),
-              },
-              [_(child.title)],
-            ),
-          ]),
-        );
-      });
-
-      /* Collapsible wrapper (grid trick needs single child) */
-      const listWrapper = E("div", { class: "sidebar-list-wrapper" }, [ul]);
-
-      /* Section wrapper */
-      const section = E(
-        "li",
-        { class: "sidebar-section" + (hasActive ? " expanded" : "") },
-        [toggle, listWrapper],
-      );
-
-      /* Toggle click handler */
-      toggle.addEventListener("click", () => {
-        section.classList.toggle("expanded");
-      });
-
-      sectionList.appendChild(section);
-    });
-
-    nav.appendChild(sectionList);
-    sidebar.appendChild(nav);
-
-    /* Keep fixed nav aligned with its flex-child wrapper */
-    const syncLeft = () => {
-      nav.style.left = sidebar.getBoundingClientRect().left + "px";
-    };
-    syncLeft();
-    window.addEventListener("resize", syncLeft);
-  },
-
-  initTableOfContents() {
-    const tocContainer = document.querySelector("#toc-container");
-    if (!tocContainer) return;
-
-    let scrollCleanup = null;
-    let prevKey = "";
-
-    const buildToc = () => {
-      const sections = document.querySelectorAll(
-        "#view .cbi-section:not([data-tab-title]) > .cbi-title > h3, #view .cbi-section:not([data-tab-title]) > h3",
-      );
-
-      /* Build a key from section count + heading texts to detect real changes */
-      const key = Array.from(sections, (h) => h.textContent.trim()).join("|");
-      if (key === prevKey) return; /* skip rebuild if headings unchanged */
-      prevKey = key;
-
-      if (sections.length < 2) {
-        tocContainer.innerHTML = "";
-        if (scrollCleanup) scrollCleanup();
-        return;
-      }
-
-      tocContainer.innerHTML = "";
-
-      const tocIcon = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "svg",
-      );
-      tocIcon.setAttribute("width", "16");
-      tocIcon.setAttribute("height", "16");
-      tocIcon.setAttribute("viewBox", "0 0 16 16");
-      tocIcon.setAttribute("fill", "none");
-      tocIcon.innerHTML =
-        '<path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>';
-      const heading = E("div", { class: "toc-heading" }, [
-        tocIcon,
-        "On this page",
-      ]);
-      const list = E("ul", { class: "toc-list" });
-
-      const sectionElements = [];
-
-      sections.forEach((h3, i) => {
-        const id = "section-" + i;
-        const section = h3.closest(".cbi-section");
-        if (section) {
-          section.id = id;
-          sectionElements.push(section);
-        }
-
-        const text = h3.textContent.trim();
-        const link = E(
-          "a",
-          { class: "toc-link", href: "#" + id, "data-target": id },
-          [text],
-        );
-
-        link.addEventListener("click", (e) => {
-          e.preventDefault();
-          const section = document.getElementById(id);
-          if (!section) return;
-          /* Scroll to the h3 heading, not the section container top */
-          const el = section.querySelector("h3") || section;
-          const headerOffset = 80;
-          const targetY =
-            el.getBoundingClientRect().top + window.scrollY - headerOffset;
-          const startY = window.scrollY;
-          const dist = targetY - startY;
-          if (Math.abs(dist) < 1) return;
-          const dur = Math.min(600, 200 + Math.abs(dist) * 0.08);
-          const t0 = performance.now();
-          const step = (now) => {
-            const p = Math.min((now - t0) / dur, 1);
-            const ease = 1 - Math.pow(1 - p, 3);
-            window.scrollTo(0, startY + dist * ease);
-            if (p < 1) requestAnimationFrame(step);
-          };
-          requestAnimationFrame(step);
+  initUciIndicator() {
+    const original = ui.changes && ui.changes.setIndicator;
+    if (!original) return;
+    ui.changes.setIndicator = function (n) {
+      original.call(this, n);
+      document
+        .querySelectorAll('[data-indicator="uci-changes"]')
+        .forEach((el) => {
+          el.setAttribute("data-count", n || 0);
         });
-
-        list.appendChild(E("li", { class: "toc-item" }, [link]));
-      });
-
-      /* Fixed inner wrapper (outer .docs-toc stretches with flex) */
-      let tocInner = tocContainer.querySelector(".toc-inner");
-      if (!tocInner) {
-        tocInner = E("div", { class: "toc-inner" });
-        tocContainer.appendChild(tocInner);
-
-        /* Keep fixed toc aligned with its flex-child wrapper */
-        const syncTocLeft = () => {
-          tocInner.style.left = tocContainer.getBoundingClientRect().left + "px";
-        };
-        syncTocLeft();
-        window.addEventListener("resize", syncTocLeft);
-      }
-      tocInner.innerHTML = "";
-      tocInner.appendChild(heading);
-      tocInner.appendChild(list);
-
-      /* Scroll-spy via scroll event */
-      const links = tocContainer.querySelectorAll(".toc-link");
-      const headerOffset = 80;
-
-      const getSectionTop = (el) => {
-        let top = 0;
-        while (el) {
-          top += el.offsetTop;
-          el = el.offsetParent;
-        }
-        return top;
-      };
-
-      const updateActive = () => {
-        let activeIdx = 0;
-        const scrollY = window.scrollY + headerOffset + 20;
-
-        for (let i = sectionElements.length - 1; i >= 0; i--) {
-          const s = sectionElements[i];
-          if (!s || s.offsetHeight === 0) continue;
-          if (getSectionTop(s) <= scrollY) {
-            activeIdx = i;
-            break;
-          }
-        }
-
-        links.forEach((l, i) => {
-          l.classList.toggle("active", i === activeIdx);
-        });
-      };
-
-      if (scrollCleanup) scrollCleanup();
-      window.addEventListener("scroll", updateActive, { passive: true });
-      scrollCleanup = () =>
-        window.removeEventListener("scroll", updateActive);
-
-      updateActive();
     };
-
-    /* Wait for view content to load, then build TOC.
-       Observe only .docs-content (not #maincontent) to avoid triggering
-       rebuilds when TOC/sidebar classes change — they live inside #maincontent
-       but outside .docs-content. */
-    const target =
-      document.querySelector(".docs-content") ||
-      document.getElementById("maincontent") ||
-      document.body;
-    let rafId = null;
-    new MutationObserver(() => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        buildToc();
-      });
-    }).observe(target, { childList: true, subtree: true });
-
-    requestAnimationFrame(buildToc);
-  },
-
-  renderModeMenu(tree) {
-    const ul = document.querySelector("#modemenu");
-    const children = ui.menu.getChildren(tree);
-    let activeChild = null;
-
-    children.forEach((child, index) => {
-      const isActive = L.env.requestpath.length
-        ? child.name === L.env.requestpath[0]
-        : index === 0;
-
-      ul.appendChild(
-        E(
-          "li",
-          {
-            class: isActive ? "active" : "",
-          },
-          [E("a", { href: L.url(child.name) }, [_(child.title)])],
-        ),
-      );
-
-      if (isActive) activeChild = child;
-    });
-
-    if (activeChild) {
-      this.renderMainMenu(activeChild, activeChild.name);
-      this.renderMobileMenu(activeChild, activeChild.name);
-    }
-
-    if (ul.children.length > 1) {
-      ul.style.display = "";
-    }
   },
 });

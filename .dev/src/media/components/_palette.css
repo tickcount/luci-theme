@@ -1,0 +1,161 @@
+/**
+ * Command palette (⌘K) as ChatGPT's search dialog (chatgpt.com › Search):
+ * a fixed 720×460 panel at ~21% of the viewport height, no scrim; the input
+ * row (no glass) with Clear | close on the right, a row of filter pills
+ * (All + one per menu section), then 64px two-line result rows. The trigger
+ * is the search icon in the sidebar's title row (_layout.css). <md: a
+ * full-screen takeover.
+ */
+
+/* ── Overlay & panel ─────────────────────────────────────────────── */
+
+#cmdk-overlay {
+  @apply fixed inset-0 z-50 flex items-start justify-center bg-transparent pt-[20.7vh];
+  @apply max-md:bg-background max-md:pt-0;
+
+  &[hidden] {
+    @apply hidden;
+  }
+}
+
+.cmdk-panel {
+  @apply bg-elevated dark:bg-dialog-bg border-border flex h-[min(460px,calc(100dvh-20.7vh-16px))] w-[min(720px,92vw)] flex-col overflow-hidden rounded-2xl border shadow-2xl;
+  @apply [transition:opacity_.15s_var(--ease-out),translate_.15s_var(--ease-out)] starting:-translate-y-1.5 starting:opacity-0;
+  @apply max-md:h-dvh max-md:w-full max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:shadow-none max-md:transition-none;
+}
+
+/* ── Input row ───────────────────────────────────────────────────── */
+
+.cmdk-inputrow {
+  @apply flex shrink-0 items-center gap-2 py-5 pr-4 pl-6;
+  @apply max-md:py-3 max-md:pr-3 max-md:pl-4;
+
+  /* Clear and its hairline appear only once there is text to clear. */
+  &:has(input.cmdk-input:placeholder-shown) :is(button.cmdk-clear, .cmdk-sep) {
+    @apply hidden;
+  }
+}
+
+/* input.-prefixed to tie with the global input[type="text"] baseline
+   (specificity 0,1,1) so the later import wins its border/ring reset. */
+input.cmdk-input {
+  @apply text-foreground placeholder:text-text-tertiary h-6 min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-base leading-6 shadow-none outline-none;
+
+  &:focus {
+    @apply border-0 ring-0 outline-none;
+  }
+}
+
+button.cmdk-clear {
+  @apply text-muted-foreground hover:bg-sidebar-accent h-9 shrink-0 rounded-full bg-transparent px-3 text-sm leading-5;
+}
+
+.cmdk-sep {
+  @apply bg-border h-5 w-px shrink-0;
+}
+
+button.cmdk-cancel {
+  @apply text-muted-foreground hover:bg-sidebar-accent size-9 shrink-0 rounded-full bg-transparent p-0;
+
+  &::before {
+    @apply size-5 bg-current content-[''] [mask:var(--icon-x)_center/contain_no-repeat];
+  }
+}
+
+/* ── Filter pills (ChatGPT's All / Chats / Images) ───────────────── */
+
+.cmdk-filters {
+  @apply flex shrink-0 [scrollbar-width:none] items-center gap-1 overflow-x-auto px-3 pb-3;
+
+  &::-webkit-scrollbar {
+    @apply hidden;
+  }
+}
+
+button.cmdk-filter {
+  @apply text-muted-foreground hover:bg-sidebar-accent h-9 shrink-0 rounded-full bg-transparent px-3 text-sm leading-5;
+
+  &[aria-pressed="true"] {
+    @apply bg-muted text-foreground;
+  }
+}
+
+/* ── List ────────────────────────────────────────────────────────── */
+
+.cmdk-list {
+  @apply min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3;
+  @apply max-md:pb-[calc(0.75rem+env(safe-area-inset-bottom))];
+}
+
+.cmdk-group {
+  @apply text-text-tertiary px-6 pt-3 pb-1 text-xs leading-4 font-medium;
+}
+
+/* Result row: 32px icon slot, title (14/20) over the section line (12/16
+   secondary), an optional check on the right; 12px padding, 12px corners,
+   inset 12px from the panel. */
+.cmdk-row {
+  @apply text-foreground mx-3 grid h-auto min-h-16 w-[calc(100%-24px)] cursor-pointer grid-cols-[32px_minmax(0,1fr)_auto] items-center justify-start gap-x-3 rounded-xl border-0 bg-transparent p-3 text-left text-sm leading-5 font-normal no-underline;
+
+  /* The base stylesheet underlines every anchor on hover — a list row is
+     not prose, keep it flat. */
+  &:hover {
+    @apply no-underline;
+  }
+
+  &.is-selected {
+    @apply bg-sidebar-accent;
+  }
+
+  mark {
+    @apply text-foreground bg-transparent font-medium;
+  }
+
+  .cmdk-icon {
+    @apply row-span-2 flex size-8 items-center justify-center;
+
+    img.outline-icon {
+      @apply size-5;
+    }
+  }
+
+  .cmdk-title {
+    @apply text-foreground col-start-2 min-w-0 truncate;
+  }
+
+  .cmdk-group-name {
+    @apply text-muted-foreground col-start-2 row-start-2 min-w-0 truncate text-xs leading-4;
+  }
+
+  /* A row without a section line (theme commands) centres its title. */
+  .cmdk-title:last-child,
+  .cmdk-title:has(+ .cmdk-check) {
+    @apply row-span-2;
+  }
+
+  /* The tick marks which theme mode is in effect. */
+  .cmdk-check {
+    @apply text-foreground col-start-3 row-span-2 row-start-1 block size-4 shrink-0 bg-current [mask:var(--icon-check)_center/contain_no-repeat];
+  }
+}
+
+/* A tab row reads "Parent › Title": the parent gives way first. */
+.cmdk-title:has(> .cmdk-parent) {
+  @apply flex items-baseline;
+}
+
+.cmdk-parent {
+  @apply text-muted-foreground truncate font-normal;
+}
+
+.cmdk-label {
+  @apply max-w-[calc(100%-1.5rem)] shrink-0 truncate;
+
+  &::before {
+    @apply text-muted-foreground px-1.5 font-normal content-['›'];
+  }
+}
+
+.cmdk-empty {
+  @apply text-muted-foreground px-6 py-8 text-center text-sm;
+}

@@ -1,0 +1,14 @@
+/* LuCI writes a few icons as text — the "Clone⿻" button every cloneable
+   table renders (U+2FFB). Geist has no such glyph, so the browser fell back
+   to a CJK font's ideograph box. This face joins the Geist family for that
+   one code point only and draws it as Lucide's "copy" icon; unicode-range
+   keeps it from loading on pages that never print it. Source:
+   scripts/build-glyph-font.py. */
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("../assets/fonts/outline-glyphs.woff") format("woff");
+  unicode-range: U+2FFB;
+}

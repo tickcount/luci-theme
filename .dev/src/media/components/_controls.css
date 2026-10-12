@@ -1,0 +1,178 @@
+/* Smaller LuCI control states and widgets, in ChatGPT's terms. */
+
+/* ── Password field (form.Value password=true) ──────────────────────
+   ui.js wraps the input and its reveal button in .control-group; the
+   button sits inside the field's right edge as ChatGPT's eye toggle. */
+.control-group:has(> input.password-input) {
+  @apply relative inline-flex w-60 max-w-full items-center;
+
+  > input.password-input {
+    @apply w-full pr-10;
+  }
+
+  > .cbi-button {
+    @apply text-muted-foreground hover:text-foreground hover:bg-sidebar-accent absolute right-1 size-7 rounded-full bg-transparent p-0 text-[0px] before:size-4 before:bg-current before:content-[''] before:[mask:var(--icon-eye)_center/contain_no-repeat];
+  }
+}
+
+/* Address fields with a notation toggle (interface › IPv4 address: the
+   input reuses .password-input, followed by a "…" button that switches to
+   the CIDR list) get the same in-field trailing button, drawn as Lucide's
+   ellipsis — the text "…" sat on the baseline, low in its circle, and the
+   button was glued to the field. */
+div:not(.control-group):has(> input.password-input + .cbi-button) {
+  @apply relative inline-flex w-60 max-w-full items-center;
+
+  > input.password-input {
+    @apply w-full pr-10;
+  }
+
+  > .cbi-button {
+    @apply text-muted-foreground hover:text-foreground hover:bg-sidebar-accent absolute right-1 size-7 rounded-full bg-transparent p-0 text-[0px] before:size-4 before:bg-current before:content-[''] before:[mask:var(--icon-ellipsis)_center/contain_no-repeat];
+  }
+}
+
+/* ── Read-only ───────────────────────────────────────────────────── */
+:is(input, textarea)[readonly]:not([type="checkbox"], [type="radio"]) {
+  @apply bg-muted text-muted-foreground border-transparent focus:ring-0;
+}
+
+/* ── Radio / checkbox choice lists (ui.Select widget=radio|checkbox) ─ */
+span.cbi-radio,
+span.cbi-checkbox {
+  @apply inline-flex min-h-9 cursor-pointer items-center gap-2 pr-3 text-sm;
+
+  > input {
+    @apply mr-0;
+  }
+
+  > label:empty {
+    @apply hidden;
+  }
+}
+
+/* ── Change flash (re-rendered maps, re-added rows, reappearing tabs) ─ */
+@keyframes chatgpt-flash {
+  from {
+    background-color: var(--accent-a10);
+  }
+}
+
+.flash {
+  @apply animate-[chatgpt-flash_1s_var(--ease-out)];
+}
+
+/* ── Table cells whose option is inactive (dependency unmet) ──────── */
+.td.inactive > * {
+  @apply opacity-40;
+}
+
+/* ── Title references ("➙" link inside a title) ─────────────────── */
+a.cbi-title-ref {
+  @apply text-foreground decoration-text-tertiary underline underline-offset-2 hover:decoration-current;
+}
+
+/* ── Button sizes and states ─────────────────────────────────────── */
+.btn.small,
+.cbi-button.small {
+  @apply h-7 px-2.5 text-xs;
+}
+
+.btn.large,
+.cbi-button.large {
+  @apply h-11 px-4 text-base;
+}
+
+.btn.active {
+  @apply bg-soft-hover;
+}
+
+.btn.disabled {
+  @apply pointer-events-none opacity-40;
+}
+
+/* A bare <a class="btn"> behaves like the button. */
+a.btn,
+a.cbi-button {
+  @apply no-underline hover:no-underline;
+}
+
+/* ── Keyboard keys ───────────────────────────────────────────────── */
+kbd {
+  @apply bg-muted text-muted-foreground inline-flex h-5 min-w-5 items-center justify-center rounded-md px-1.5 font-sans text-xs;
+}
+
+/* ── Responsive helpers used by LuCI views ───────────────────────── */
+.hide-xs {
+  @apply max-sm:hidden!;
+}
+.hide-sm {
+  @apply max-md:hidden!;
+}
+
+/* ── Package manager control panel ───────────────────────────────
+   Disk space / Filter / Download / Actions / translations sat loose on the
+   canvas. They form one settings card: a two-column grid of labelled
+   blocks (14/20 medium label over its controls), disk space across the
+   top. */
+#view .controls:has(> div > label) {
+  @apply border-border bg-panel-bg mb-6 grid gap-x-6 gap-y-4 rounded-2xl border p-4 md:grid-cols-2;
+
+  > div {
+    @apply m-0! flex min-w-0 flex-col items-start! gap-2 text-left!;
+
+    /* The app centres each child with align-self. */
+    > * {
+      @apply self-start!;
+    }
+
+    > .cbi-progressbar {
+      @apply self-stretch!;
+    }
+
+    > label {
+      @apply text-foreground w-auto! text-sm leading-5 font-medium;
+    }
+
+    > .control-group {
+      @apply mt-0 flex-wrap;
+    }
+
+    &:has(> .cbi-progressbar) {
+      @apply items-stretch! md:col-span-2;
+    }
+  }
+}
+
+.table :is(.th, .td).size {
+  @apply whitespace-nowrap;
+}
+
+/* ── Package manager pager and filter bar ────────────────────────── */
+.controls .pager {
+  @apply flex items-center justify-center gap-2;
+
+  > .text {
+    @apply text-muted-foreground px-3 text-sm tabular-nums;
+  }
+
+  /* Square arrow buttons, like the chart card's ‹ › (the app's own CSS
+     stretches them with flex: 1). */
+  > .btn {
+    @apply size-9 flex-none! rounded-full p-0;
+  }
+}
+
+/* ── Table filter row (luci.main.tablefilters) ───────────────────── */
+.cbi-section-table-filter .th {
+  @apply py-2;
+
+  input.cbi-section-filter {
+    @apply h-8 w-full;
+  }
+}
+
+/* ── Fieldsets (legacy templates) ───────────────────────────────── */
+fieldset {
+  @apply m-0 min-w-0 border-0 p-0;
+}

@@ -1,0 +1,57 @@
+/* Tabs — ChatGPT's toggle-button group (Usage: Overview / Analytics):
+   36px pills in a row, secondary ink at rest, the selected pill on a 10%
+   ink fill in full ink. Both LuCI tab flavours share it: form section tabs
+   (ul.cbi-tabmenu from ui.tabs) and page tabs (#tabmenu > ul.tabs from
+   menu-outline.js). Long groups (DHCP's 16 tabs) wrap onto a second row on
+   desktop instead of hiding behind an invisible horizontal scroll; phones
+   keep the swipeable single row. */
+.cbi-tabmenu,
+.tabs {
+  @apply m-0 mb-4 flex w-full max-w-full [scrollbar-width:none] list-none flex-nowrap items-center gap-1 overflow-x-auto p-0 md:flex-wrap md:overflow-visible;
+
+  &::-webkit-scrollbar {
+    @apply hidden;
+  }
+
+  li {
+    @apply relative m-0 min-w-fit shrink-0 list-none border-0;
+
+    > a {
+      @apply text-text-tertiary hover:text-foreground hover:bg-sidebar-accent focus-visible:ring-ring inline-flex h-9 items-center justify-center rounded-full px-3 text-sm leading-[18px] font-normal whitespace-nowrap no-underline [transition:color_.15s,background-color_.15s] hover:no-underline focus-visible:ring-2 focus-visible:outline-none;
+    }
+  }
+
+  li.cbi-tab > a,
+  > li.active > a {
+    @apply bg-soft-hover text-foreground;
+  }
+
+  li.cbi-tab-disabled > a {
+    @apply text-text-tertiary;
+  }
+
+  li[data-errors] {
+    @apply after:bg-destructive after:text-destructive-fg after:absolute after:top-0 after:right-0 after:z-20 after:inline-flex after:h-4 after:min-w-4 after:items-center after:justify-center after:rounded-full after:px-1 after:text-[10px] after:leading-none after:font-semibold after:content-[attr(data-errors)];
+
+    > a {
+      @apply text-destructive;
+    }
+  }
+}
+
+/* Inactive panes keep their layout width (graphs measure them when their
+   tab opens), so they collapse instead of display:none. */
+[data-tab-title] {
+  @apply invisible h-0 overflow-hidden;
+}
+[data-tab-active="true"] {
+  @apply visible h-auto overflow-visible;
+}
+
+#tabmenu {
+  @apply mb-2 w-full;
+}
+
+.cbi-section-node-tabbed {
+  @apply mt-0;
+}

@@ -1,13 +1,22 @@
-# Node & package manager
-node_modules
-package-lock.json
-yarn.lock
+# Dependencies
+.dev/node_modules/
 
-# Env files
-.env
+# Environment secrets (host, SSH keys)
+.dev/.env
 
-# System Configuration File
+# macOS
 .DS_Store
-/.claude
-/.vite/deps
-/.vs
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Agent working files
+.superpowers/
+docs/superpowers/
+.dev/prototypes/
+
+# Local page snapshots for the dev /mocks/ route — see "Mock Pages" in CLAUDE.md
+/.dev/mocks/

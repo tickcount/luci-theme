@@ -1,0 +1,96 @@
+/* ChatGPT buttons: 36px pills, 14/18 regular, 12px inline padding, a 1px
+   border that is transparent unless the variant is outlined. Fills are
+   text-tinted (5% rest / 10% hover) so they read on any surface; the solid
+   ink pill is reserved for the page's primary action. */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.btn,
+.cbi-button {
+  @apply inline-flex h-9 cursor-pointer items-center justify-center gap-1 rounded-full border border-transparent px-3 py-0 text-sm leading-[18px] font-normal whitespace-nowrap select-none [transition:color_.15s,background-color_.15s,border-color_.15s,box-shadow_.15s];
+
+  &:focus-visible {
+    @apply ring-ring ring-2 outline-none;
+  }
+
+  &[disabled] {
+    @apply cursor-default opacity-40;
+  }
+
+  .td & {
+    @apply h-8 whitespace-nowrap;
+  }
+}
+
+/* Soft (default): Manage / Export in ChatGPT's data controls. LuCI tags
+   plenty of inline actions apply/action/positive; they stay soft unless
+   marked .important or they are the page's own Save & Apply. */
+.btn,
+.cbi-button,
+.cbi-button-default,
+.cbi-button-neutral,
+.cbi-button-download,
+.cbi-button-find,
+.cbi-button-link,
+.cbi-button-reload,
+.cbi-button-edit,
+.cbi-button-up,
+.cbi-button-down,
+.cbi-button-action,
+.cbi-button-apply,
+.cbi-button-positive,
+.cbi-button-fieldadd,
+.cbi-button-save {
+  @apply bg-muted text-foreground;
+
+  &:not([disabled]):hover {
+    @apply bg-soft-hover;
+  }
+}
+
+.drag-handle {
+  @apply bg-muted text-muted-foreground hover:bg-soft-hover cursor-grab;
+}
+
+/* Solid ink: "Create environment" / "Restore defaults". */
+.btn.primary,
+.cbi-button-primary,
+.cbi-button-add,
+.cbi-button-action.important,
+.cbi-button-apply.important,
+.cbi-button-positive.important,
+.cbi-page-actions .cbi-button-apply {
+  @apply bg-primary text-primary-foreground border-transparent;
+
+  &:not([disabled]):hover {
+    @apply bg-primary-hover;
+  }
+}
+
+/* Danger soft: "Delete" / "Reset" — red ink on a 10% red tint; solid red
+   when LuCI marks the destructive action .important. */
+.cbi-button-negative,
+.cbi-section-remove .cbi-button,
+.cbi-button-reset,
+.cbi-button-remove {
+  @apply bg-danger-soft text-destructive;
+
+  &:not([disabled]):hover {
+    @apply bg-destructive-a20;
+  }
+}
+
+.cbi-button-negative.important {
+  @apply bg-danger-solid text-destructive-fg;
+
+  &:not([disabled]):hover {
+    @apply bg-danger-solid opacity-90;
+  }
+}
+
+/* Spinner inherits the button ink (bootstrap's --on-color). */
+.btn.spinning,
+.cbi-button.spinning {
+  @apply pl-8!;
+}

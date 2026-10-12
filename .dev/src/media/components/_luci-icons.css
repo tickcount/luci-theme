@@ -1,0 +1,156 @@
+/*
+  LuCI's own interface/status icons (luci-base /resources/icons, /cbi) are
+  Tango-style gradient bitmaps; ChatGPT draws monochrome line icons. Each
+  known icon is swapped for its Lucide counterpart without touching LuCI's
+  <img>: the element keeps its src, size and tooltip-host role,
+  object-position pushes the original out of its box and the Lucide SVG is
+  painted as its background, flattened to ink like the theme's own icons.
+  Disabled variants (and a port without link) are dimmed. Icons not listed
+  (third-party apps, loading.svg) are left untouched. Plain CSS: the per-
+  icon custom properties can't be expressed with @apply.
+*/
+
+:root {
+  --luci-icon-ink: brightness(0) saturate(100%);
+}
+
+[data-darkmode="true"] {
+  --luci-icon-ink: brightness(0) saturate(100%) invert(1);
+}
+
+img[src$="/port_up.svg"],
+img[src$="/port_down.svg"],
+img[src$="/ethernet.svg"],
+img[src$="/ethernet_disabled.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-ethernet-port.svg");
+}
+
+img[src$="/bridge.svg"],
+img[src$="/bridge_disabled.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/network.svg");
+}
+
+img[src$="/switch.svg"],
+img[src$="/switch_disabled.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-router.svg");
+}
+
+img[src$="/vlan.svg"],
+img[src$="/vlan_disabled.svg"],
+img[src$="/vrf.svg"],
+img[src$="/vrf_disabled.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/layers.svg");
+}
+
+img[src$="/alias.svg"],
+img[src$="/alias_disabled.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-link-2.svg");
+}
+
+img[src$="/tunnel.svg"],
+img[src$="/tunnel_disabled.svg"],
+img[src$="/wireguard.svg"],
+img[src$="/wireguard_disabled.svg"],
+img[src$="/amneziawg.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/shield.svg");
+}
+
+img[src$="/wifi.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-wifi.svg");
+}
+
+img[src$="/wifi_disabled.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-wifi-off.svg");
+}
+
+/* No signal: the full bars, dimmed below — Lucide's signal-zero is a lone
+   dot that vanishes at icon size. */
+img[src$="/signal-none.svg"],
+img[src$="/signal-000-000.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-signal.svg");
+}
+
+img[src$="/signal-000-025.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-signal-low.svg");
+}
+
+img[src$="/signal-025-050.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-signal-medium.svg");
+}
+
+img[src$="/signal-050-075.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-signal-high.svg");
+}
+
+img[src$="/signal-075-100.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-signal.svg");
+}
+
+img[src$="/file.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-file.svg");
+}
+
+img[src$="/folder.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-folder.svg");
+}
+
+img[src$="/link.svg"] {
+  --luci-icon: url("/luci-static/outline/icons/luci-link.svg");
+}
+
+img[src$="/port_up.svg"],
+img[src$="/port_down.svg"],
+img[src$="/ethernet.svg"],
+img[src$="/ethernet_disabled.svg"],
+img[src$="/bridge.svg"],
+img[src$="/bridge_disabled.svg"],
+img[src$="/switch.svg"],
+img[src$="/switch_disabled.svg"],
+img[src$="/vlan.svg"],
+img[src$="/vlan_disabled.svg"],
+img[src$="/vrf.svg"],
+img[src$="/vrf_disabled.svg"],
+img[src$="/alias.svg"],
+img[src$="/alias_disabled.svg"],
+img[src$="/tunnel.svg"],
+img[src$="/tunnel_disabled.svg"],
+img[src$="/wireguard.svg"],
+img[src$="/wireguard_disabled.svg"],
+img[src$="/amneziawg.svg"],
+img[src$="/wifi.svg"],
+img[src$="/wifi_disabled.svg"],
+img[src$="/signal-none.svg"],
+img[src$="/signal-000-000.svg"],
+img[src$="/signal-000-025.svg"],
+img[src$="/signal-025-050.svg"],
+img[src$="/signal-050-075.svg"],
+img[src$="/signal-075-100.svg"],
+img[src$="/file.svg"],
+img[src$="/folder.svg"],
+img[src$="/link.svg"] {
+  background: var(--luci-icon) center / 80% no-repeat;
+  object-position: -9999px 0;
+  filter: var(--luci-icon-ink);
+  opacity: 0.85;
+  /* If the original file fails to load, the browser prints the alt text
+     (Wireless' "MediaTek … Wireless Controller") letter by letter in a
+     narrow cell; the swapped icon never needs it. */
+  overflow: hidden;
+  color: transparent;
+  font-size: 0;
+}
+
+img[src$="/port_down.svg"],
+img[src$="/ethernet_disabled.svg"],
+img[src$="/bridge_disabled.svg"],
+img[src$="/switch_disabled.svg"],
+img[src$="/vlan_disabled.svg"],
+img[src$="/vrf_disabled.svg"],
+img[src$="/alias_disabled.svg"],
+img[src$="/tunnel_disabled.svg"],
+img[src$="/wireguard_disabled.svg"],
+img[src$="/wifi_disabled.svg"],
+img[src$="/signal-none.svg"],
+img[src$="/signal-000-000.svg"] {
+  opacity: 0.35;
+}

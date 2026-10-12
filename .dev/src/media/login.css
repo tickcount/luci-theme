@@ -1,0 +1,187 @@
+/**
+ * luci-theme-outline: login page stylesheet
+ * Copyright 2025 eamonxg <eamonxiong@gmail.com>
+ * Licensed to the public under the Apache License 2.0.
+ */
+
+/* Theme variables and @apply'd utilities only: no Preflight, no scanned
+   classes. The reset below covers what sysauth.ut renders. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@import "./fonts.css";
+@import "./_tokens.css";
+@import "./_shared.css";
+
+@custom-variant dark (&:where([data-darkmode=true], [data-darkmode=true] *));
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    @apply box-border;
+  }
+
+  body,
+  p {
+    @apply m-0;
+  }
+
+  button,
+  input {
+    @apply m-0 border-0 bg-transparent p-0 [color:inherit] [font:inherit];
+  }
+
+  ::placeholder {
+    @apply opacity-100;
+  }
+
+  [hidden] {
+    @apply hidden!;
+  }
+}
+
+html {
+  @apply bg-background text-foreground font-sans antialiased;
+}
+
+body {
+  @apply text-sm leading-5;
+}
+
+/* ── Entry animation ── */
+
+@keyframes fadeSlideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+
+.animate-element {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeSlideIn 0.35s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+.animate-delay-100 {
+  animation-delay: 0.05s;
+}
+.animate-delay-200 {
+  animation-delay: 0.1s;
+}
+.animate-delay-300 {
+  animation-delay: 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-element {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────
+   The admin pages' language on a single centred column: page canvas, a
+   brand block, two stacked pill fields, the solid ink pill as the action.
+   No imagery. */
+
+.login-layout {
+  @apply relative flex min-h-dvh flex-col items-center justify-center px-5 pt-16 pb-24;
+}
+
+.login-column {
+  @apply w-full max-w-[360px];
+}
+
+/* ── Brand block ── */
+
+.login-brand {
+  @apply mb-8 flex flex-col items-center gap-1 text-center;
+}
+
+/* The mark is a full-colour badge with its own shape: shown as is, no
+   frame around it. */
+.login-logo {
+  @apply mb-4 flex size-12 shrink-0 items-center justify-center;
+
+  img {
+    @apply size-12;
+  }
+}
+
+.login-hostname {
+  /* The admin page title: 24/28.8 medium. */
+  @apply text-foreground m-0 text-2xl leading-[1.2] font-medium;
+}
+
+.login-subtitle {
+  @apply text-muted-foreground text-sm leading-5;
+}
+
+/* ── Error: the danger callout ── */
+
+.login-error {
+  @apply bg-danger-surface text-danger-surface-fg mb-3 rounded-2xl px-4 py-3 text-sm leading-5;
+}
+
+/* ── Fields: label over a pill input, stacked, no container ── */
+
+.login-card {
+  @apply flex flex-col gap-4;
+}
+
+.login-field {
+  @apply flex flex-col gap-2;
+}
+
+.login-label {
+  @apply text-foreground text-sm leading-5 font-medium;
+}
+
+.login-input {
+  @apply border-input bg-input-bg text-foreground h-11 w-full rounded-full border px-4 text-sm leading-5 outline-none [transition:border-color_.15s];
+
+  /* outline, not ring: same 2px blue, a fraction of ring's shadow stack. */
+  &:focus {
+    @apply outline-ring border-transparent outline-2 outline-solid;
+  }
+}
+
+.login-password {
+  @apply relative;
+
+  .login-input {
+    @apply pr-11;
+  }
+}
+
+.login-pw-toggle {
+  @apply hover:bg-foreground-a5 absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent;
+
+  img {
+    @apply size-4 opacity-60 [transition:opacity_.15s];
+  }
+
+  &:hover img {
+    @apply opacity-100;
+  }
+}
+
+/* ── Action: the solid ink pill ── */
+
+.login-submit {
+  @apply bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:outline-ring mt-4 h-11 w-full cursor-pointer rounded-full border-0 text-sm font-medium [transition:background-color_.15s] focus-visible:outline-2 focus-visible:outline-offset-2;
+}
+
+/* ── Footer ── */
+
+.login-footer {
+  @apply text-text-tertiary absolute right-0 bottom-5 left-0 px-6 text-center text-xs leading-4;
+
+  a {
+    @apply text-text-tertiary hover:text-foreground underline underline-offset-2 [transition:color_.15s];
+  }
+}

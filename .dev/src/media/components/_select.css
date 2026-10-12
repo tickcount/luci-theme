@@ -1,0 +1,23 @@
+/* ChatGPT selector trigger ("Auto detect"): 36px pill, 12px inline padding,
+   hairline border on a faint ink tint, 16px chevron in tertiary ink. */
+select {
+  @apply border-border bg-select-bg text-foreground hover:bg-sidebar-accent focus-visible:ring-ring h-9 max-w-full min-w-52.5 cursor-pointer appearance-none rounded-full border px-3 pr-9 text-sm leading-[18px] [transition:background-color_.15s,box-shadow_.15s] focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-40 md:max-w-[min(100%,25rem)];
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238f8f8f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px;
+
+  /* size>1 / multiple render as a list box, not a trigger. */
+  &[multiple],
+  &[size]:not([size="1"]) {
+    @apply h-auto rounded-xl bg-none p-1.5;
+  }
+
+  option {
+    @apply bg-elevated text-foreground;
+  }
+}
+
+[data-darkmode="true"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23787878' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
