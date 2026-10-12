@@ -61,6 +61,16 @@ table.table,
       }
     }
 
+    /* A section table's body rows sit in a tbody under the title thead
+       (LuCI only appends a thead that has rows): its first row is not the
+       table's top edge, so its hover fill keeps square top corners. */
+    .thead + .tbody > &:first-child {
+      .th,
+      .td {
+        @apply rounded-t-none;
+      }
+    }
+
     &:last-child {
       &[data-title] {
         @apply before:border-b-0 @3xl:before:rounded-bl-2xl;
@@ -83,7 +93,9 @@ table.table,
         .placeholder
       ):hover
       > .td {
-      @apply @3xl:bg-sidebar-accent;
+      /* Padding-box fill: the row's hairline is the cell's own bottom
+         border, which the hover fill painted over. */
+      @apply @3xl:bg-sidebar-accent bg-clip-padding;
     }
 
     &.placeholder .td {

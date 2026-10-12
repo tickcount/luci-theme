@@ -70,11 +70,11 @@ OpenWrt 25.12+ and snapshots use `apk`; older versions use `opkg`.
 cd /tmp
 
 # opkg
-uclient-fetch -O luci-theme-outline.ipk https://github.com/tickcount/luci-theme/releases/latest/download/luci-theme-outline_1.0.1-r20261012_all.ipk
+uclient-fetch -O luci-theme-outline.ipk https://github.com/tickcount/luci-theme/releases/latest/download/luci-theme-outline_1.0.2-r20261012_all.ipk
 opkg install luci-theme-outline.ipk
 
 # apk
-uclient-fetch -O luci-theme-outline.apk https://github.com/tickcount/luci-theme/releases/latest/download/luci-theme-outline-1.0.1-r20261012.apk
+uclient-fetch -O luci-theme-outline.apk https://github.com/tickcount/luci-theme/releases/latest/download/luci-theme-outline-1.0.2-r20261012.apk
 apk add --allow-untrusted luci-theme-outline.apk
 ```
 

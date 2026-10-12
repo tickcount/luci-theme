@@ -86,7 +86,10 @@
   }
 }
 
-/* The card. */
+/* The card. The build minifies this list into a forgiving
+   `:is(.cbi-section-node, .cbi-section:has(> .cbi-value))`, which lifts a
+   plain node to (0,2,0) — an exception that resets the card needs more
+   than (0,2,0) or it only works in dev. */
 .cbi-section-node,
 .cbi-section:has(> .cbi-value) {
   @apply border-border bg-panel-bg rounded-2xl border;
@@ -171,8 +174,9 @@
    "Unconfigured interfaces") gets them drawn as a separate block. The
    node stops being the card; its leading rows form the card themselves
    (side hairlines, top/bottom caps), the heading becomes a section title
-   below it and the table keeps its own card. */
-.cbi-section-node:has(> h3) {
+   below it and the table keeps its own card. Scoped under .cbi-section to
+   outrank the minified card rule above. */
+.cbi-section > .cbi-section-node:has(> h3) {
   @apply rounded-none border-0 bg-transparent;
 
   > .cbi-value {

@@ -51,6 +51,30 @@
   }
 }
 
+/* Ink bubble content keeps the bubble's colour: hosted in a port card
+   (Status › Overview, lan4), the card's `strong { text-foreground }` and the
+   `.ifacebadge` chip painted "Received bytes:" and "lan:" ink-on-ink, and
+   LuCI's icons kept their light-mode ink. The rich `.ifacebadge` popover
+   (_badge.css) is a light surface and keeps its own colours. */
+.cbi-tooltip-container > .cbi-tooltip:not(.ifacebadge) {
+  --luci-icon-ink: brightness(0) saturate(100%) invert(1);
+
+  strong {
+    @apply text-inherit;
+  }
+
+  .ifacebadge {
+    @apply bg-transparent px-0 text-inherit;
+
+    /* The zone swatch's 5% pill vanished on the light-mode bubble but
+       ringed the dot on the dark one: a bare dot in both (LuCI's " " text
+       and the pill's gap would pad it). */
+    > .zonebadge {
+      @apply gap-0 border-0 bg-transparent! p-0 text-[0px];
+    }
+  }
+}
+
 /* Badges and cards that host a tooltip are already visibly interactive
    chips: no dotted underline (ChatGPT pills never carry one). */
 :is(.zonebadge, .ifacebadge, .ifacebox-head, .label).cbi-tooltip-container,
