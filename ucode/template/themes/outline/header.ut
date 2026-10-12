@@ -204,7 +204,11 @@
 							type="button"
 							aria-label="{{ _('Design') }}"
 						>
-							<img src="{{ media }}/icons/sun.svg" width="16" height="16" alt="">
+							{#- Both glyphs ship; CSS shows the one for html[data-darkmode],
+							    which the head script sets before paint — no sun→moon flip
+							    once sidebar-outline.js loads. -#}
+							<img class="theme-icon-light" src="{{ media }}/icons/sun.svg" width="16" height="16" alt="">
+							<img class="theme-icon-dark" src="{{ media }}/icons/moon.svg" width="16" height="16" alt="">
 						</button>
 					</div>
 				</header>

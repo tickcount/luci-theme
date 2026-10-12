@@ -1,6 +1,10 @@
+/* Tables lay out by the width of their container (#maincontent, a dialog),
+   not the viewport: below 48rem of room (@max-3xl) every row is a stacked
+   card — cells pair up under their data-title captions — and from 48rem
+   (@3xl) up it is a real grid. */
 table.table,
 .table {
-  @apply border-border bg-panel-bg mb-4 w-full border-separate border-spacing-0 overflow-visible rounded-2xl border text-sm leading-5 max-md:block max-md:rounded-2xl;
+  @apply border-border bg-panel-bg mb-4 w-full border-separate border-spacing-0 overflow-visible rounded-2xl border text-sm leading-5 @max-3xl:block @max-3xl:rounded-2xl;
 
   &[width="100%"] {
     @apply w-full;
@@ -27,41 +31,49 @@ table.table,
     @apply before:rounded-tl-2xl;
   }
 
+  /* Stacked, a named row's title (ACME's "example_wildcard") heads the
+     card on a line of its own, on the cells' text edge — as a leftover
+     table cell it sat indented beside the first value with a hairline
+     stub under it. */
+  .cbi-section-table-row[data-title] {
+    @apply @max-3xl:before:block @max-3xl:before:basis-full @max-3xl:before:border-0 @max-3xl:before:px-1 @max-3xl:before:pt-1 @max-3xl:before:pb-1.5;
+  }
+
   tbody,
   .tbody {
-    @apply max-md:block;
+    @apply @max-3xl:block;
   }
 
   tr,
   .tr {
-    @apply max-md:border-border [transition:background-color_.15s] max-md:flex max-md:flex-wrap max-md:border-b max-md:px-3 max-md:py-2.5 max-md:last:border-b-0;
+    @apply @max-3xl:border-border [transition:background-color_.15s] @max-3xl:flex @max-3xl:flex-wrap @max-3xl:border-b @max-3xl:px-3 @max-3xl:py-2.5 @max-3xl:last:border-b-0;
 
     &:first-child {
       &:not([data-title]) {
         .th,
         .td {
-          @apply md:first:rounded-tl-2xl;
+          @apply @3xl:first:rounded-tl-2xl;
         }
       }
       .th,
       .td {
-        @apply md:last:rounded-tr-2xl;
+        @apply @3xl:last:rounded-tr-2xl;
       }
     }
 
     &:last-child {
       &[data-title] {
-        @apply before:border-b-0 md:before:rounded-bl-2xl;
+        @apply before:border-b-0 @3xl:before:rounded-bl-2xl;
       }
       .td {
-        @apply border-b-0 md:first:rounded-bl-2xl md:last:rounded-br-2xl;
+        @apply border-b-0 @3xl:first:rounded-bl-2xl @3xl:last:rounded-br-2xl;
       }
     }
 
     &.table-titles,
     &.cbi-section-table-titles,
     &.cbi-section-table-descr {
-      @apply max-md:hidden;
+      @apply @max-3xl:hidden;
     }
 
     &:not(
@@ -71,7 +83,7 @@ table.table,
         .placeholder
       ):hover
       > .td {
-      @apply md:bg-sidebar-accent;
+      @apply @3xl:bg-sidebar-accent;
     }
 
     &.placeholder .td {
@@ -88,7 +100,7 @@ table.table,
 
   th,
   .th {
-    @apply border-border text-text-tertiary border-b px-3 py-2.5 text-left text-sm font-medium first:pl-4 last:pr-4 max-md:hidden;
+    @apply border-border text-text-tertiary border-b px-2 py-2.5 text-left text-sm font-medium first:pl-4 last:pr-4 @max-3xl:hidden;
 
     &[width="100%"] {
       @apply w-full;
@@ -108,10 +120,15 @@ table.table,
     }
   }
 
+  /* Stacked, cells pair up at 50% but never break a word to stay there: a
+     long hostname takes a line of its own. w-full is the flex item's
+     specified size, which caps its automatic minimum (min-content) at the
+     card's width — so a path longer than the card wraps inside it instead
+     of pushing the page sideways (ACME's fullchain path at 320px). */
   td,
   .td {
-    @apply border-border table-cell border-b px-3 py-2.5 align-middle break-words whitespace-normal [transition:background-color_.15s] first:pl-4 last:pr-4 max-md:flex-[1_1_50%] max-md:border-0 max-md:px-1 max-md:py-1;
-    @apply before:max-md:text-text-tertiary before:hidden before:content-[attr(data-title)] before:max-md:mb-0.5 before:max-md:block before:max-md:text-xs before:max-md:font-normal;
+    @apply border-border table-cell border-b px-2 py-2.5 align-middle break-words whitespace-normal [transition:background-color_.15s] @max-3xl:w-full @max-3xl:flex-[1_1_50%] @max-3xl:border-0 @max-3xl:px-1 @max-3xl:py-1 @3xl:first:pl-4 @3xl:last:pr-4;
+    @apply before:@max-3xl:text-text-tertiary before:hidden before:content-[attr(data-title)] before:@max-3xl:mb-0.5 before:@max-3xl:block before:@max-3xl:text-xs before:@max-3xl:font-normal;
 
     > input[type="text"],
     > input[type="password"],
@@ -134,7 +151,7 @@ table.table,
          at word boundaries (break-words leaves min-content alone):
          wrap-anywhere let the auto layout squeeze columns down to one
          letter ("non|e", MACs split mid-octet). */
-      @apply max-md:mb-1 max-md:basis-full max-md:self-start max-md:text-left max-md:wrap-anywhere md:max-w-prose md:break-words;
+      @apply @max-3xl:mb-1 @max-3xl:basis-full @max-3xl:self-start @max-3xl:text-left @max-3xl:wrap-anywhere @3xl:max-w-prose @3xl:break-words;
 
       &[data-widget="CBI.DummyValue"],
       &[data-widget="CBI.Button"],
@@ -142,31 +159,39 @@ table.table,
       &[data-widget="dvalue"],
       &[data-widget="button"],
       &[data-widget="fvalue"] {
-        @apply max-md:basis-1/2;
+        @apply @max-3xl:basis-1/2;
       }
     }
 
+    /* form.js pins the action column with an inline width/min-width
+       measured in the grid; a stacked card must not inherit it. */
     &.cbi-section-actions {
-      @apply max-md:flex-[0_0_100%];
+      @apply @max-3xl:w-auto! @max-3xl:min-w-0! @max-3xl:flex-[0_0_100%];
     }
 
-    &.cbi-section-actions > div {
-      @apply justify-end;
+    /* Row actions (drag, Edit, Delete; Startup's five service buttons):
+       4px apart and a square drag handle keep the pinned action column
+       narrow enough for a six-column grid (Firewall › Zones) at 920px.
+       Stacked, they keep their own width and start at the card's text edge
+       like every other cell, wrapping on a phone instead of running off it
+       (stretched to fill, four of them were 170px slabs at tablet width).
+       The group is only as wide as its buttons (up to the cell): form.js
+       pins the column to this div's offsetWidth, re-measured on resize —
+       a full-width block fed back the cell's own width, and one measured
+       while stacked then held a too-wide column once the grid returned. */
+    &.cbi-section-actions > div:not(.btn, .cbi-button) {
+      @apply flex w-max max-w-full flex-row flex-nowrap items-center justify-end gap-1 @max-3xl:flex-wrap @max-3xl:justify-start @3xl:ml-auto;
 
-      > .cbi-button {
-        @apply max-md:flex-1;
+      > .drag-handle {
+        @apply w-8 shrink-0 grow-0 px-0;
       }
-    }
-
-    > .cbi-button {
-      @apply max-md:w-full;
     }
 
     &[width="100%"] {
-      @apply w-full max-md:flex-[0_0_100%];
+      @apply w-full @max-3xl:flex-[0_0_100%];
     }
     &[width="33%"] {
-      @apply w-1/3 max-md:flex-[0_0_33.333%];
+      @apply w-1/3 @max-3xl:flex-[0_0_33.333%];
     }
   }
 }
@@ -178,34 +203,37 @@ table.table,
 /* Div tables (legacy templates, and ui.Table builds div rows when its head
    is a div): the table model comes from the classes, not the tags. */
 div.table {
-  @apply md:table;
+  @apply @3xl:table;
 }
 div.tr {
-  @apply md:table-row;
+  @apply @3xl:table-row;
 }
 div.th,
 div.td {
-  @apply md:table-cell;
+  @apply @3xl:table-cell;
 }
 .thead {
-  @apply md:table-header-group;
+  @apply @3xl:table-header-group;
 }
 .tbody {
-  @apply md:table-row-group;
+  @apply @3xl:table-row-group;
 }
 .tfoot {
-  @apply md:table-footer-group;
+  @apply @3xl:table-footer-group;
 }
 
-/* ui.Table empty state: one cell spanning the whole table width. */
+/* ui.Table empty state: one cell spanning the whole table width. Stacked,
+   the row sizes to the message: a fixed 56px row under the cell's 16px
+   insets pushed "This section contains no values yet" off-centre (30px
+   above, 10px below). */
 .table {
   @apply relative;
 
   .tr.placeholder {
-    @apply h-14;
+    @apply h-14 @max-3xl:h-auto;
 
     > .td {
-      @apply text-muted-foreground absolute inset-x-0 bottom-0 border-b-0 py-4 text-center max-md:static max-md:basis-full;
+      @apply text-muted-foreground absolute inset-x-0 bottom-0 border-b-0 py-4 text-center @max-3xl:static @max-3xl:basis-full @max-3xl:py-2.5;
     }
   }
 }

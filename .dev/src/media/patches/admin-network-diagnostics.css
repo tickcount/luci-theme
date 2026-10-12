@@ -1,0 +1,12 @@
+/*
+  PATCH: admin-network-diagnostics (luci-mod-network — Network › Diagnostics)
+  Loaded on-demand by header.ut only when data-page matches this filename.
+  Native declarations keep this standalone patch free of Tailwind helper output.
+
+  The companion JS gives the command-output textarea a blank placeholder, so
+  an empty output box (nothing run yet) can drop out instead of standing as a
+  320px empty terminal under the forms. Output brings it back.
+*/
+textarea[id="widget.command-output"]:placeholder-shown {
+  display: none;
+}

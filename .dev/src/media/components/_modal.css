@@ -10,7 +10,9 @@
   }
 
   > .modal {
-    @apply bg-dialog-bg text-foreground flex w-full max-w-[680px] flex-col gap-4 rounded-2xl border-0 p-5 break-words whitespace-normal shadow-lg outline-none [transition:opacity_.2s_var(--ease-enter),scale_.2s_var(--ease-enter)] starting:scale-[.98] starting:opacity-0;
+    /* A size container like #maincontent: tables inside stack or grid on
+       the dialog's width (_table.css). */
+    @apply bg-dialog-bg text-foreground @container flex w-full max-w-[680px] flex-col gap-4 rounded-2xl border-0 p-5 break-words whitespace-normal shadow-lg outline-none [transition:opacity_.2s_var(--ease-enter),scale_.2s_var(--ease-enter)] starting:scale-[.98] starting:opacity-0;
     @apply dark:shadow-[inset_0_0_0_1px_var(--border),var(--shadow-lg)];
 
     > h4:first-child {

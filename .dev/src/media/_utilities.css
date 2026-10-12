@@ -2,45 +2,60 @@
   @apply hidden!;
 }
 
+/* Alignment helpers. On a table cell they align its column only while the
+   table is a grid; stacked cards read top-to-bottom, left-aligned (UPnP's
+   right-aligned "Expires" otherwise floated to the card's far edge). */
 .left {
-  @apply text-left!;
-  &:is(td) {
-    @apply md:text-left!;
+  &:not(td, .td) {
+    @apply text-left!;
+  }
+  &:is(td, .td) {
+    @apply @3xl:text-left!;
   }
 }
 
 .right {
-  @apply text-right!;
-  &:is(td) {
-    @apply md:text-right!;
+  &:not(td, .td) {
+    @apply text-right!;
+  }
+  &:is(td, .td) {
+    @apply @3xl:text-right!;
   }
 }
 
 .center {
-  @apply text-center!;
-  &:is(td) {
-    @apply md:text-center!;
+  &:not(td, .td) {
+    @apply text-center!;
+  }
+  &:is(td, .td) {
+    @apply @3xl:text-center!;
   }
 }
 
 .top {
-  @apply align-top!;
-  &:is(td) {
-    @apply md:align-top!;
+  &:not(td, .td) {
+    @apply align-top!;
+  }
+  &:is(td, .td) {
+    @apply @3xl:align-top!;
   }
 }
 
 .bottom {
-  @apply align-bottom!;
-  &:is(td) {
-    @apply md:align-bottom!;
+  &:not(td, .td) {
+    @apply align-bottom!;
+  }
+  &:is(td, .td) {
+    @apply @3xl:align-bottom!;
   }
 }
 
 .middle {
-  @apply align-middle!;
-  &:is(td) {
-    @apply md:align-middle!;
+  &:not(td, .td) {
+    @apply align-middle!;
+  }
+  &:is(td, .td) {
+    @apply @3xl:align-middle!;
   }
 }
 

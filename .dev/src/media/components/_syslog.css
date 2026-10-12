@@ -31,6 +31,41 @@
     > input {
       @apply my-0!;
     }
+
+    /* Wrapped bars: fields at a working width, so "between [ ] and [ ]"
+       and "[Default] and above" fit a phone line or break cleanly. */
+    > select {
+      @apply min-w-0;
+    }
+
+    > input[type="number"] {
+      @apply w-28;
+    }
+  }
+}
+
+/* The filter bars are flat runs of [Not] [☐] [facility:] [select] per
+   filter. Wrapped as flex they broke anywhere on a phone — severity's "Not"
+   box landed at the end of the facility line. A four-column grid keeps each
+   filter on one aligned row; with room, two filters share a row. Only bars
+   of exactly that shape (one or two filters, field fourth) — the Kernel
+   Log's "between … and …" and "[select] and above" bars keep the wrap. */
+#content_syslog
+  > div:is(
+    :has(> :nth-child(4):last-child),
+    :has(> :nth-child(8):last-child)
+  ):has(> :is(select, input:not([type="checkbox"])):nth-child(4)) {
+  /* The caption column has a floor so the facility, severity and text
+     filters (three separate bars) start their fields on one edge. */
+  @apply grid grid-cols-[auto_auto_minmax(5.5rem,auto)_minmax(0,1fr)] gap-y-2 @2xl:grid-cols-[repeat(2,auto_auto_minmax(5.5rem,auto)_minmax(0,1fr))];
+
+  > label {
+    @apply m-0!;
+  }
+
+  > select,
+  > input:not([type="checkbox"]) {
+    @apply w-full max-w-full min-w-0;
   }
 }
 

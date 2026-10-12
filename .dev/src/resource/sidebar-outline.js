@@ -27,6 +27,42 @@ return baseclass.extend({
     this.initSidebar();
     this.initMobileDrawer();
     this.initThemeToggle();
+    this.initTabReveal();
+  },
+
+  /* ── Tab rows ── */
+
+  // Phones show a tab row as one swipeable line: centre its selected tab,
+  // or a page opened on a later tab (Administration › HTTP(S) Access, a
+  // remembered DHCP section tab) shows a row whose selection is off the
+  // edge. Page tabs mark it li.active, section tabs (ui.tabs) li.cbi-tab,
+  // on render and on every switch. Horizontal only: the page never scrolls.
+  initTabReveal() {
+    const main = document.getElementById("maincontent");
+    if (!main) return;
+    const sel = ".tabs > li.active, .cbi-tabmenu > li.cbi-tab";
+    const reveal = (li) => {
+      const row = li.parentElement;
+      if (row.scrollWidth <= row.clientWidth) return;
+      const at =
+        li.getBoundingClientRect().left - row.getBoundingClientRect().left;
+      row.scrollLeft += at - (row.clientWidth - li.offsetWidth) / 2;
+    };
+    const scan = (n) => {
+      if (n.matches?.(sel)) reveal(n);
+      n.querySelectorAll?.(sel).forEach(reveal);
+    };
+    scan(main);
+    new MutationObserver((records) => {
+      for (const r of records)
+        if (r.type === "attributes") scan(r.target);
+        else r.addedNodes.forEach(scan);
+    }).observe(main, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
   },
 
   /* ── Theme ── */
@@ -43,19 +79,6 @@ return baseclass.extend({
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.setAttribute("data-darkmode", isDark);
     localStorage.setItem(THEME_KEY, theme);
-    this._updateThemeIcon(isDark);
-  },
-
-  _updateThemeIcon(isDark) {
-    const btn = document.getElementById("theme-toggle-btn");
-    if (!btn) return;
-    const img = btn.querySelector("img");
-    if (!img) return;
-    const media =
-      document.documentElement.getAttribute("data-outline-media") ||
-      "/luci-static/outline";
-    const base = String(media).replace(/\/$/, "");
-    img.src = base + (isDark ? "/icons/moon.svg" : "/icons/sun.svg");
   },
 
   initThemeToggle() {

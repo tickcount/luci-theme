@@ -42,6 +42,13 @@
       @apply row-span-4 row-start-1;
     }
 
+    /* A <br> between widgets (System › Local Time: input, br, sync
+       buttons) would be a grid item of its own — an empty 18px row plus
+       its gap; the grid already stacks the widgets. */
+    > br {
+      @apply hidden;
+    }
+
     > .cbi-value-description {
       @apply text-muted-foreground col-start-1 row-start-3 mt-0.5 justify-self-start text-xs leading-4 break-words;
 
@@ -129,6 +136,18 @@
       ) {
         @apply w-full max-w-full;
       }
+
+      /* Field + inline toggle (password + reveal eye; Interfaces › IPv4
+         address + "…" CIDR switch, both .password-input): the pair spans
+         the row like every other field, the input taking what the button
+         leaves. */
+      .cbi-value-field div:has(> input.password-input) {
+        @apply flex w-full;
+
+        > input.password-input {
+          @apply min-w-0 flex-1;
+        }
+      }
     }
   }
 }
@@ -137,6 +156,14 @@
    hairline at its top edge, inset 16px like ChatGPT's ::after rules. */
 .cbi-value:not(.hidden) ~ .cbi-value:not(.hidden) {
   @apply before:bg-border before:pointer-events-none before:absolute before:inset-x-4 before:top-0 before:h-px;
+}
+
+/* Rows of a section nested in a row (form.SectionValue — Backup / Flash
+   Firmware's Backup, Restore, mtdblock groups) already sit inside that
+   row's 16px inset: as their own 16px again they started 32px in, off the
+   group heading's edge. They and their hairlines run on the outer inset. */
+.cbi-value .cbi-section .cbi-value {
+  @apply px-0 before:inset-x-0;
 }
 
 .cbi-value-field {

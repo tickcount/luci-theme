@@ -1,0 +1,41 @@
+/*
+  PATCH: admin-status-nftables (luci-app-firewall — Status › Firewall)
+  Loaded on-demand by header.ut only when data-page matches this filename.
+  Native declarations keep this standalone patch free of Tailwind helper output.
+
+  The view ships its own <style> with `.nft-rules tr > td { padding: .25em
+  !important }`, which flattened the theme's cell insets.
+*/
+
+@container (width >= 48rem) {
+  .nft-rules.table tr > td {
+    padding: 0.625rem 0.5rem !important;
+
+    &:first-child {
+      padding-left: 1rem !important;
+    }
+    &:last-child {
+      padding-right: 1rem !important;
+    }
+  }
+}
+
+/* Match badges ("Ingress device name is lan4") flow as text, so a long one
+   wraps inside its pill instead of splitting into flex columns; spaced
+   right/below only, so the first one lines up with the cell's edge. */
+.nft-rules.table .ifacebadge {
+  display: inline-block;
+  max-width: 100%;
+  margin: 0 0.25rem 0.25rem 0;
+  overflow-wrap: anywhere;
+}
+
+/* Stacked rows: matches, then the action, each across the whole card —
+   the app's inline 60/40 widths squeezed the matches into a narrow column. */
+@container (width < 48rem) {
+  .nft-rules.table tr > td {
+    flex-basis: 100% !important;
+    width: auto !important;
+    padding: 0.25rem !important;
+  }
+}

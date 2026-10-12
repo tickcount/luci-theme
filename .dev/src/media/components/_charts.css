@@ -89,7 +89,7 @@
   }
 
   tr.tr {
-    @apply relative grid grid-flow-col grid-cols-3 grid-rows-[auto_auto] gap-x-6 border-0 p-0 pl-3.5 hover:bg-transparent max-md:flex-none;
+    @apply relative grid grid-flow-col grid-cols-3 grid-rows-[auto_auto] gap-x-6 border-0 p-0 pl-3.5 hover:bg-transparent @max-3xl:flex-none;
     @apply before:absolute before:top-0.5 before:left-0 before:h-10 before:w-1 before:rounded-xs before:bg-(--legend) before:content-[''];
 
     --legend: var(--muted-foreground);

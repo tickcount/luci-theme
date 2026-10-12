@@ -374,6 +374,11 @@ button.topbar-icon-btn {
   }
 }
 
+html[data-darkmode="true"] #theme-toggle-btn .theme-icon-light,
+html:not([data-darkmode="true"]) #theme-toggle-btn .theme-icon-dark {
+  @apply hidden;
+}
+
 .topbar-indicators {
   @apply flex items-center gap-1;
 
@@ -420,7 +425,14 @@ button.topbar-icon-btn {
    would force into the stacked mobile layout). */
 
 #maincontent {
-  @apply flex-1 [scrollbar-gutter:stable] overflow-y-auto px-5 pt-2 pb-16 max-md:px-4;
+  /* A size container: tables (_table.css) switch between the stacked card
+     layout and a real grid on the width they actually get, not the
+     viewport's — beside the sidebar a 768–1280px window leaves a phone-sized
+     column, and a grid table there scrolled the whole page sideways.
+     break-word: an unbroken token (AmneziaWG's public key, a long URL)
+     wraps where it would otherwise run off a phone — it does not shrink
+     table columns, which size on whole words. */
+  @apply @container flex-1 [scrollbar-gutter:stable] overflow-y-auto px-5 pt-2 pb-16 wrap-break-word max-md:px-4;
 
   > * {
     @apply mx-auto w-full max-w-[920px];
@@ -463,9 +475,9 @@ button.topbar-icon-btn {
   }
 
   .zone-forwards {
-    @apply flex flex-nowrap items-stretch gap-2 leading-relaxed;
+    @apply flex flex-nowrap items-stretch gap-1.5 leading-relaxed;
     > span {
-      @apply text-muted-foreground flex shrink-0 basis-8 items-center justify-center self-center;
+      @apply text-muted-foreground flex shrink-0 basis-6 items-center justify-center self-center;
     }
     .zone-src,
     .zone-dest {
@@ -493,13 +505,21 @@ button.topbar-icon-btn {
     @apply mb-4 leading-relaxed;
   }
 
+  /* Button groups in a row (System › Local Time: "Sync with browser" /
+     "Sync with NTP-Server") wrap on a phone instead of leaving the card. */
   .control-group {
-    @apply mt-1;
+    @apply mt-1 flex-wrap!;
+
+    /* Field + action (Software › Filter / Clear): the field gives way so
+       its button stays beside it. */
+    > input {
+      @apply min-w-0 flex-[1_1_8rem];
+    }
   }
 
   .control-group,
   .cbi-page-actions > div:not(.cbi-dropdown),
-  .cbi-section-actions > div {
+  .cbi-section-actions:not(.td) > div {
     @apply flex flex-row flex-nowrap items-center gap-2;
   }
 }
@@ -545,4 +565,13 @@ button.topbar-icon-btn {
 
 #view p + :is(button, .btn, .cbi-button) {
   @apply mt-3;
+}
+
+/* A right-aligned toolbar the view tucks onto the next row with an inline
+   negative margin (Status › Firewall: Hide empty chains / Show raw counters
+   / Reset Counters / Restart Firewall over the table tabs). Wrapped onto two
+   lines the pull dragged it over "Collecting data…" and the tab bar; as its
+   own wrapping row it never overlaps. */
+#view > div.right:has(> :is(button, .btn, .cbi-button)) {
+  @apply mb-4! flex flex-wrap items-center justify-end gap-2;
 }

@@ -19,6 +19,12 @@ import { minify as terserMinify } from "terser";
 import { defineConfig, loadEnv, Plugin, ResolvedConfig } from "vite";
 import config from "./luci-theme.config.js";
 
+// macOS tar packs AppleDouble `._*` companions (xattrs, resource forks) into
+// the devkit's `.ut` push (`tar -cf - | ssh … tar -xf -`), leaving stray
+// `._header.ut` files in the device's template dir. The push inherits this
+// process's environment, so switch that off for every child tar.
+process.env.COPYFILE_DISABLE = "1";
+
 const CURRENT_DIR = process.cwd();
 const PROJECT_ROOT = resolve(CURRENT_DIR, "..");
 const BUILD_OUTPUT = resolve(PROJECT_ROOT, "htdocs/luci-static");

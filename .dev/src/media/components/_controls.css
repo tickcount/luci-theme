@@ -114,9 +114,10 @@ kbd {
    Disk space / Filter / Download / Actions / translations sat loose on the
    canvas. They form one settings card: a two-column grid of labelled
    blocks (14/20 medium label over its controls), disk space across the
-   top. */
+   top. Two columns only once the content column has 42rem — beside the
+   expanded sidebar a 768px window leaves ~480px, too narrow to split. */
 #view .controls:has(> div > label) {
-  @apply border-border bg-panel-bg mb-6 grid gap-x-6 gap-y-4 rounded-2xl border p-4 md:grid-cols-2;
+  @apply border-border bg-panel-bg mb-6 grid gap-x-6 gap-y-4 rounded-2xl border p-4 @2xl:grid-cols-2;
 
   > div {
     @apply m-0! flex min-w-0 flex-col items-start! gap-2 text-left!;
@@ -139,7 +140,7 @@ kbd {
     }
 
     &:has(> .cbi-progressbar) {
-      @apply items-stretch! md:col-span-2;
+      @apply items-stretch! @2xl:col-span-2;
     }
   }
 }

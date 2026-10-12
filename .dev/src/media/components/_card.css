@@ -64,12 +64,25 @@
     @apply mb-2 flex justify-end;
   }
 
+  /* Overview › Network / Wireless status cards fill a phone's row like
+     every other card (sized by content they floated, narrower than the
+     page, in its middle); on a wide column they stop at 28rem rather than
+     stretch one short card across 920px. They share a row only once the
+     content column has 42rem — beside the expanded sidebar a 768px window
+     squeezed two radio cards until their SSID badges overflowed. */
   .network-status-table {
-    @apply mb-3 flex flex-wrap justify-around gap-4 md:flex-nowrap;
+    @apply mb-3 flex flex-wrap justify-around gap-4 @2xl:flex-nowrap;
+
+    > .ifacebox {
+      @apply max-w-md flex-[1_1_16rem];
+    }
   }
 
+  /* Port status cards share their row's height: centred, a linkless
+     port's shorter card (lan2/lan3: "no link", 0 B) sat a few px lower
+     than its neighbours with ragged tops and bottoms. */
   div[style*="display:grid"]:has(> .ifacebox) {
-    @apply place-items-center;
+    @apply items-stretch justify-items-center;
   }
 }
 
@@ -77,6 +90,40 @@
 .cbi-section-node,
 .cbi-section:has(> .cbi-value) {
   @apply border-border bg-panel-bg rounded-2xl border;
+}
+
+/* A section that renders no rows (irqbalance's "Snapshot of current IRQs",
+   whose content the view appends after it) draws no empty 2px card, and its
+   heading stays with what follows instead of a section gap away. */
+.cbi-section-node:empty {
+  @apply hidden;
+}
+
+.cbi-section:has(> .cbi-section-node:empty):not(
+    :has(> :not(h3, .cbi-section-node:empty, .cbi-section-descr:empty))
+  ) {
+  @apply mb-0;
+}
+
+/* A section after view-built content between sections (that same IRQ
+   textarea) keeps the 32px section rhythm instead of touching it. */
+.cbi-map
+  > :not(.cbi-section, h2, .cbi-map-descr, .cbi-tabmenu, style, script)
+  + .cbi-section {
+  @apply mt-8;
+}
+
+/* A card or table that follows loose flow content — a view's own list or
+   blurb div (Status › Firewall's Hook/Policy lines) — keeps 12px of air
+   instead of sitting flush on the text; after a heading, paragraph or tab
+   bar this margin collapses into theirs. Flattened inner nodes are rows of
+   the outer card and stay flush. */
+#maincontent
+  :is(.table, .cbi-section-node):not(
+    :first-child,
+    .cbi-section-node .cbi-section-node
+  ) {
+  @apply mt-3;
 }
 
 /* Non-row content placed straight into a card (views that build their own
@@ -91,6 +138,19 @@
     ul
   ) {
   @apply m-4;
+}
+
+/* …unless the node already sits inside a row's 16px inset (Repo Public
+   Keys' "Add new repository public key" box): then the blurb lines up
+   with the textarea and button beside it rather than 16px further in. */
+.cbi-value .cbi-section-node > :is(p, .cbi-section-descr, .control-group) {
+  @apply mx-0 mt-0;
+}
+
+/* The dynlist is an inline-flex at 100%: with that inset it ran 32px past
+   the card's edge (SSH-Keys). As a block it fills what the margins leave. */
+.cbi-section-node > .cbi-dynlist {
+  @apply flex w-auto;
 }
 
 /* Tabbed node: the pane rows are the card's rows; the tab bar sits above
@@ -175,10 +235,17 @@
       @apply gap-1 rounded-none py-2;
     }
 
+    /* Pinned to the card's left edge only while shown: a resting left-0
+       undid _tooltip.css's off-screen parking, and the hidden bubble of
+       the last port (Overview › Port status) let a phone page scroll 24px
+       sideways into nothing. */
     &.cbi-tooltip-container {
       @apply static;
       .cbi-tooltip {
-        @apply bottom-0 left-0;
+        @apply bottom-0;
+      }
+      &:hover .cbi-tooltip {
+        @apply left-0;
       }
     }
   }
@@ -255,8 +322,9 @@
 
   /* flex-1 alone lets the badges shrink to min-content, so six SSIDs stay
      crammed on one line instead of wrapping. The floor mirrors
-     luci-theme-bootstrap's min-width: 220px on the same badges. */
+     luci-theme-bootstrap's min-width: 220px on the same badges, capped at
+     the card's own width so a narrow card never overflows. */
   .ifacebadge {
-    @apply min-w-55 flex-1;
+    @apply min-w-[min(100%,13.75rem)] flex-1;
   }
 }

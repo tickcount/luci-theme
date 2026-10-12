@@ -8,9 +8,13 @@
   marker, the value at 18/24 medium in ink, the label 12/16 secondary.
   nlbw writes display:list-item inline on each li, hence !important.
 */
+/* .kpi is nlbw's centring flex row: without a width of its own the grid
+   shrank to one column in the middle of a phone; 140px tracks pair the
+   totals up on a phone and line all four up beside the charts. */
 .kpi ul {
+  flex: 1 1 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px 16px;
   margin: 0;
   padding: 0;

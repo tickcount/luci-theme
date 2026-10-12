@@ -57,8 +57,10 @@
         @apply pointer-events-none hidden;
       }
 
+      /* min-w-0: a squeezed chip (vnStat's three selected interfaces on a
+         phone) ellipsizes its name instead of being cut mid-letter. */
       > label {
-        @apply flex items-center gap-2;
+        @apply flex min-w-0 items-center gap-2;
       }
 
       img {
