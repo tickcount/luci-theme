@@ -30,7 +30,8 @@ would squeeze the CSS inside `ui.js`'s template literal (`.ot *` → `.ot*`).
 
 ```
 /etc/config/outline
-  appearance  mode, reduced_motion, ui/content/code_font_size
+  appearance  mode, reduced_motion, ui/content/code_font_size,
+              navigation (navbar | sidebar; unset = navbar)
   light|dark  preset, accent_name, accent, surface, ink, contrast,
               font_ui, font_ui_weight, font_content, font_code,
               list token 'name=#rrggbb[aa]'      ← derived by palette.tokens()

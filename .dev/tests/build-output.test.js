@@ -62,27 +62,34 @@ test("production assets stay within raw-transfer budgets", () => {
   // heading blocks, composite pickers and the package-manager panel.
   // 200K: raised by the maintainer to leave room for further ChatGPT
   // adaptation (174 KB at the time).
-  assert.ok(main <= 200_000, `main.css ${main} B exceeds 200 KB`);
+  // 205K: the navbar layout (Appearance › Navigation) -- desktop-only pill
+  // rules and the progressive blur behind them, ~6 KB.
+  assert.ok(main <= 205_000, `main.css ${main} B exceeds 205 KB`);
   assert.ok(login <= 11_000, `login.css ${login} B exceeds 11 KB`);
   // 17.5K: palette tabs (third-level nodes, redirect-parent folding, legacy
   // recents mapping, parent-aware scoring, per-segment path words) added
   // ~1.2 KB; the admin total below moved by the same amount.
   // 18.5K: the ChatGPT sidebar's icon rail and the palette's section
   // filter pills added ~0.7 KB; the admin total below still holds.
-  assert.ok(menu <= 18_500, `menu-outline.js ${menu} B exceeds 18.5 KB`);
+  // 19K: monogram icons for sections the icon map doesn't know.
+  assert.ok(menu <= 19_000, `menu-outline.js ${menu} B exceeds 19 KB`);
   assert.ok(router <= 16_000, `router-outline.js ${router} B exceeds 16 KB`);
   // 7K: independent group folds (persisted) and the rail's logo-to-expand
   // control for the ChatGPT sidebar.
   // 7.5K: the dropdown viewport clamp (an open LuCI list past the screen
   // edge is capped and nudged back inside) added ~0.7 KB.
-  assert.ok(sidebar <= 7_500, `sidebar-outline.js ${sidebar} B exceeds 7.5 KB`);
+  // 8K: the navbar layout (Appearance › Navigation) reuses the rail's
+  // page-list popover under the section pills, on hover and on click.
+  // 8.5K: and measures the pill row so its side pills give way to it.
+  assert.ok(sidebar <= 8_500, `sidebar-outline.js ${sidebar} B exceeds 8.5 KB`);
   assert.ok(
     // 232.5K (was 217.5K under Inter): Geist saves 19 KB, the full ChatGPT
     // restyle (CSS + rail/palette JS) spends ~24 KB.
     // 245K: main.css's sweep growth above (~11 KB raw, ~2 KB gzip).
     // 270K: follows main.css's 200K ceiling (+25 KB).
-    main + menu + router + sidebar + font <= 270_000,
-    "admin assets exceed 270 KB",
+    // 275K: follows main.css's 205K ceiling (navbar layout).
+    main + menu + router + sidebar + font <= 275_000,
+    "admin assets exceed 275 KB",
   );
   assert.ok(login + font + logo <= 60_000, "login assets exceed 60 KB");
 });

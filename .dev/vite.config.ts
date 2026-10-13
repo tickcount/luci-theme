@@ -190,7 +190,9 @@ export default defineConfig(({ mode, command }) => {
   const OPENWRT_URL = OPENWRT.origin;
   const OPENWRT_SSH_HOST = `root@${OPENWRT.hostname}`;
   const DEV_HOST = env.VITE_DEV_HOST || "127.0.0.1";
-  const DEV_PORT = Number(env.VITE_DEV_PORT) || 5173;
+  // PORT (a launcher that hands out ports, e.g. .claude/launch.json with
+  // autoPort) wins over .env.
+  const DEV_PORT = Number(process.env.PORT || env.VITE_DEV_PORT) || 5173;
 
   return {
     // Production assets are installed below /luci-static/. Keep the dev base

@@ -170,7 +170,9 @@ return baseclass.extend({
       if (!e.matches) this._hideCollapsedPopover();
     });
 
-    const collapsed = localStorage.getItem(SIDEBAR_KEY) === "true";
+    // header.ut's pre-paint state: never collapsed as a navbar.
+    const collapsed =
+      document.documentElement.dataset.sidebarCollapsed == "true";
     sidebar.setAttribute("data-collapsed", collapsed);
 
     const toggleBtn = document.getElementById("sidebar-toggle-btn");
@@ -195,6 +197,44 @@ return baseclass.extend({
 
     this._initAccordion();
     this._initCollapsedPopover();
+
+    // Navbar: room the pill row needs either side of the centre, so the
+    // side pills leave the content column's edge only when they must; a
+    // row too wide for the window even at 12px edges drops its labels.
+    // Measured with labels each time, so the choice can't oscillate.
+    const fit = () => {
+      const d = document.documentElement;
+      const w = (s) => document.querySelector(s)?.offsetWidth || 0;
+      const need = () =>
+        w(".sidebar-rail-nav") / 2 +
+        Math.max(w(".sidebar-rail-home"), w(".card-header-right") + 96) +
+        8;
+      d.removeAttribute("data-nav-compact");
+      d.toggleAttribute("data-nav-compact", need() * 2 + 24 > innerWidth);
+      d.style.setProperty("--nav-reserve", need() + "px");
+    };
+    const ro = new ResizeObserver(fit);
+    document
+      .querySelectorAll(
+        ".sidebar-rail-nav,.sidebar-rail-home,.card-header-right",
+      )
+      .forEach((e) => ro.observe(e));
+    addEventListener("resize", () => {
+      fit();
+      this._hideCollapsedPopover();
+    });
+
+    // The navbar's blurred fade shows once the page column has scrolled.
+    addEventListener(
+      "scroll",
+      (e) =>
+        e.target.id == "maincontent" &&
+        document.documentElement.toggleAttribute(
+          "data-scrolled",
+          e.target.scrollTop > 0,
+        ),
+      true,
+    );
   },
 
   toggleCollapse() {
@@ -223,10 +263,25 @@ return baseclass.extend({
 
   /* ── Collapsed hover popover ── */
 
+  // Page lists pop over the rail when the panel is not there to show them:
+  // a collapsed sidebar, or the navbar layout (Appearance › Navigation).
+  _pops() {
+    return (
+      document.getElementById("sidebar")?.getAttribute("data-collapsed") ==
+        "true" || this._navbar()
+    );
+  },
+
+  _navbar() {
+    return (
+      document.documentElement.dataset.nav == "navbar" &&
+      !this._mobileQuery.matches
+    );
+  },
+
   _initCollapsedPopover() {
     document.addEventListener("mouseover", (e) => {
-      const sidebar = document.getElementById("sidebar");
-      if (sidebar?.getAttribute("data-collapsed") !== "true") return;
+      if (!this._pops()) return;
 
       if (e.target.closest("#sidebar-collapsed-popover")) {
         clearTimeout(this._popoverTimer);
@@ -243,8 +298,7 @@ return baseclass.extend({
     });
 
     document.addEventListener("mouseout", (e) => {
-      const sidebar = document.getElementById("sidebar");
-      if (sidebar?.getAttribute("data-collapsed") !== "true") return;
+      if (!this._pops()) return;
 
       const isFromRelevant =
         e.target.closest(".sidebar-rail-item") ||
@@ -319,6 +373,14 @@ return baseclass.extend({
     const sidebarRect = sidebar.getBoundingClientRect();
     const itemRect = railItem.getBoundingClientRect();
 
+    // As a navbar the list drops under its section's pill.
+    if (this._navbar()) {
+      popover.style.left =
+        Math.min(itemRect.left, innerWidth - popover.offsetWidth - 8) + "px";
+      popover.style.top = itemRect.bottom + 8 + "px";
+      return;
+    }
+
     popover.style.left = sidebarRect.right + 4 + "px";
 
     const top = Math.min(
@@ -338,6 +400,8 @@ return baseclass.extend({
 
   _initAccordion() {
     document.addEventListener("click", (e) => {
+      if (!e.target.closest("#sidebar-collapsed-popover"))
+        this._hideCollapsedPopover();
       const rail = e.target.closest(".sidebar-rail-item");
       if (!rail) return;
       const sidebar = document.getElementById("sidebar");
@@ -356,6 +420,8 @@ return baseclass.extend({
       )
         return;
       e.preventDefault();
+      // A navbar section lists its pages on click too (touch has no hover).
+      if (this._navbar()) return this._showCollapsedPopover(rail);
       sidebar
         .querySelectorAll(".is-shown")
         .forEach((el) => el.classList.remove("is-shown"));

@@ -85,6 +85,7 @@ function stateFrom(mode) {
       ui_font_size: size("ui_font_size"),
       content_font_size: size("content_font_size"),
       code_font_size: size("code_font_size"),
+      navigation: ap.navigation == "sidebar" ? "sidebar" : "navbar",
     },
     light: variantFrom(uci.get("outline", "light"), "light"),
     dark: variantFrom(uci.get("outline", "dark"), "dark"),
@@ -155,6 +156,8 @@ return view.extend({
       css: el ? el.textContent : null,
       darkmode: html.getAttribute("data-darkmode"),
       reduced: html.getAttribute("data-reduced-motion"),
+      nav: html.getAttribute("data-nav"),
+      collapsed: html.getAttribute("data-sidebar-collapsed"),
       metas: Array.prototype.map.call(
         document.querySelectorAll('meta[name="theme-color"]'),
         (m) => [m, m.getAttribute("content")],
@@ -174,6 +177,7 @@ return view.extend({
     if (o.darkmode != null) html.setAttribute("data-darkmode", o.darkmode);
     if (o.reduced == null) html.removeAttribute("data-reduced-motion");
     else html.setAttribute("data-reduced-motion", o.reduced);
+    if (o.nav != null) this.applyNav(o.nav, o.collapsed);
     o.metas.forEach((e) => e[0].setAttribute("content", e[1]));
     w.closePopover();
   },
@@ -231,6 +235,33 @@ return view.extend({
       "data-darkmode",
       dark ? "true" : "false",
     );
+  },
+
+  /* The layout attribute header.ut sets, plus the sidebar's collapsed state:
+     a navbar has none, a sidebar gets this browser's back. */
+  applyNav(nav, collapsed) {
+    const html = document.documentElement;
+    if (collapsed == null) {
+      let stored = null;
+      try {
+        stored = localStorage.getItem("outline.sidebar");
+      } catch (e) {}
+      collapsed = nav != "navbar" && stored == "true" ? "true" : "false";
+    }
+    html.setAttribute("data-nav", nav);
+    html.setAttribute("data-sidebar-collapsed", collapsed);
+    document
+      .getElementById("sidebar")
+      ?.setAttribute("data-collapsed", collapsed);
+  },
+
+  previewNav(nav) {
+    if (this.outlineActive()) this.applyNav(nav);
+  },
+
+  setNavigation(nav) {
+    this.state.appearance.navigation = nav;
+    this.previewNav(nav);
   },
 
   previewMotion(value) {
@@ -343,6 +374,7 @@ return view.extend({
     this.separate = false;
     this.previewMode(this.state.appearance.mode);
     this.previewMotion(this.state.appearance.reduced_motion);
+    this.previewNav(this.state.appearance.navigation);
     this.commit();
   },
 
@@ -398,6 +430,14 @@ return view.extend({
           label: _("Mode"),
           control: w.modePicker(this.state.appearance.mode, (m) =>
             this.setMode(m),
+          ),
+        }),
+        w.row({
+          variant: "nested",
+          label: _("Navigation"),
+          description: _("Sidebar, or floating pills along the top"),
+          control: w.navPicker(this.state.appearance.navigation, (n) =>
+            this.setNavigation(n),
           ),
         }),
       ]),

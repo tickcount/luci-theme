@@ -63,7 +63,7 @@ return baseclass.extend({
       sessionStorage.setItem(
         CACHE_KEY,
         JSON.stringify({
-          v: 4,
+          v: 6,
           lang: document.documentElement.lang || "",
           html: sidebar.innerHTML,
           scroll: nav.scrollTop || 0,
@@ -83,10 +83,21 @@ return baseclass.extend({
     return String(raw).replace(/\/$/, "");
   },
 
-  _sectionIcon(sectionName, size) {
+  _sectionIcon(sectionName, size, title) {
     const key = String(sectionName || "").toLowerCase();
-    const icon = ICON_MAP[key] || ICON_MAP.default;
-    return this._iconFile(icon, size);
+    const img = this._iconFile(ICON_MAP[key] || ICON_MAP.default, size);
+    // An unmapped section -- an app's own top-level node; LuCI's menu
+    // schema carries no icon -- gets a monogram of its title, so two of
+    // them stay apart in the icon-only rail and navbar. Drawn like the
+    // lucide set and kept an <img>, so every outline-icon rule applies.
+    const ch = !ICON_MAP[key] && String(title || "").match(/[\p{L}\p{N}]/u);
+    if (ch)
+      img.src =
+        "data:image/svg+xml," +
+        encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><text x="12" y="16" text-anchor="middle" style="font:600 11px system-ui,sans-serif" fill="#000" stroke="none">${ch[0].toUpperCase()}</text></svg>`,
+        );
+    return img;
   },
 
   /** luci-base menu `admin/logout` — render in sidebar footer, not main nav */
@@ -145,9 +156,12 @@ return baseclass.extend({
     if (!sidebar) return;
     if (sidebar.getAttribute("data-outline-built") === "1") {
       // Restored from cache — chrome exists; just sync a possibly stale hostname.
-      const brand = sidebar.querySelector(".sidebar-brand-text");
       const host = sidebar.getAttribute("data-hostname");
-      if (brand && host && brand.textContent !== host) brand.textContent = host;
+      sidebar
+        .querySelectorAll(
+          ".sidebar-brand-text, .sidebar-rail-home .sidebar-rail-label",
+        )
+        .forEach((el) => host && (el.textContent = host));
       return;
     }
     sidebar.setAttribute("data-outline-built", "1");
@@ -176,6 +190,8 @@ return baseclass.extend({
           E("span", { class: "sidebar-rail-expand", "aria-hidden": "true" }, [
             this._iconFile("panel-left-open", 20),
           ]),
+          // Shown only as the navbar's brand pill (_layout.css).
+          E("span", { class: "sidebar-rail-label" }, [host]),
         ]),
         E("div", { class: "sidebar-rail-sep", role: "presentation" }),
         E("nav", {
@@ -377,7 +393,7 @@ return baseclass.extend({
             },
             [
               E("span", { class: "sidebar-icon", "aria-hidden": "true" }, [
-                this._sectionIcon(section.name, 20),
+                this._sectionIcon(section.name, 20, title),
               ]),
               E("span", { class: "sidebar-label" }, [title]),
             ],
@@ -402,7 +418,10 @@ return baseclass.extend({
             "data-section": section.name,
             "aria-label": title,
           },
-          [this._sectionIcon(section.name, 20)],
+          [
+            this._sectionIcon(section.name, 20, title),
+            E("span", { class: "sidebar-rail-label" }, [title]),
+          ],
         ),
       );
 
@@ -424,7 +443,7 @@ return baseclass.extend({
                 },
                 [
                   E("span", { class: "sidebar-icon", "aria-hidden": "true" }, [
-                    this._sectionIcon(section.name, 20),
+                    this._sectionIcon(section.name, 20, title),
                   ]),
                   E("span", { class: "sidebar-label" }, [title]),
                 ],
@@ -981,7 +1000,7 @@ return baseclass.extend({
         // ChatGPT's search row: 32px icon slot, title over a secondary
         // line (the section), grid-laid in _palette.css.
         E("span", { class: "cmdk-icon", "aria-hidden": "true" }, [
-          this._sectionIcon(page.icon, 20),
+          this._sectionIcon(page.icon, 20, page.group || page.title),
         ]),
         E(
           "span",

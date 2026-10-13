@@ -94,6 +94,7 @@ const CSS = `
 .ot-slider input::-moz-range-thumb{width:20px;height:20px;border-radius:9999px;background:currentColor;border:0;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 .ot-slider output{width:36px;text-align:right;font-size:var(--text-sm,14px);font-variant-numeric:tabular-nums}
 .ot-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:272px}
+.ot-modes.two{grid-template-columns:repeat(2,1fr);width:176px}
 .ot-mode{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
 .ot-mode input{position:absolute;opacity:0;pointer-events:none}
 .ot-tile{position:relative;isolation:isolate;display:block;width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:8px;color:var(--ot-link)}
@@ -968,6 +969,108 @@ function modePicker(value, onChange) {
   );
 }
 
+/* Navigation sketches in the current theme's own colours: the page,
+   the sidebar or the floating pills and card, accent for the current item. */
+function navSketch(kind) {
+  const f = (v) => 'style="fill:var(' + v + ')"';
+  const page = f("--ot-panel"),
+    shell = f("--ot-fill"),
+    line = f("--ot-line-strong");
+  const pill =
+    'style="fill:var(--ot-pop);stroke:var(--ot-line)" stroke-width=".5"';
+  let body;
+  if (kind == "navbar")
+    body =
+      '<rect x="12" y="11" width="13" height="6" rx="3" ' +
+      pill +
+      "/>" +
+      '<rect x="27" y="11" width="28" height="6" rx="3" ' +
+      pill +
+      "/>" +
+      '<rect x="28.5" y="12.5" width="9" height="3" rx="1.5" fill="currentColor"/>' +
+      '<circle cx="65" cy="14" r="3" ' +
+      pill +
+      "/>" +
+      '<rect x="27" y="20" width="16" height="15" rx="3" ' +
+      pill +
+      "/>" +
+      '<rect x="30" y="24" width="9" height="2" rx="1" fill="currentColor"/>' +
+      '<rect x="30" y="29" width="7" height="2" rx="1" ' +
+      line +
+      "/>" +
+      '<rect x="14" y="40" width="40" height="2" rx="1" ' +
+      line +
+      "/>" +
+      '<rect x="14" y="45" width="28" height="2" rx="1" ' +
+      line +
+      "/>";
+  else
+    body =
+      '<path d="M12 8h14v44H12a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z" ' +
+      shell +
+      "/>" +
+      '<rect x="11" y="13" width="11" height="2" rx="1" fill="currentColor"/>' +
+      '<rect x="11" y="18" width="9" height="2" rx="1" ' +
+      line +
+      "/>" +
+      '<rect x="11" y="23" width="10" height="2" rx="1" ' +
+      line +
+      "/>" +
+      '<rect x="11" y="28" width="8" height="2" rx="1" ' +
+      line +
+      "/>" +
+      '<rect x="31" y="14" width="26" height="2" rx="1" ' +
+      line +
+      "/>" +
+      '<rect x="31" y="19" width="34" height="2" rx="1" ' +
+      line +
+      "/>" +
+      '<rect x="31" y="24" width="20" height="2" rx="1" ' +
+      line +
+      "/>";
+  return (
+    '<svg viewBox="0 0 80 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<rect width="80" height="60" ' +
+    shell +
+    "/>" +
+    '<rect x="8" y="8" width="64" height="44" rx="4" ' +
+    page +
+    ' stroke="var(--ot-line)" stroke-width=".5"/>' +
+    body +
+    "</svg>"
+  );
+}
+
+/* Appearance › Navigation: the ChatGPT sidebar or the floating navbar. */
+function navPicker(value, onChange) {
+  const opts = [
+    { value: "sidebar", label: _("Sidebar") },
+    { value: "navbar", label: _("Navbar") },
+  ];
+  const name = "ot-nav-" + Math.random().toString(36).slice(2, 8);
+  return E(
+    "div",
+    {
+      class: "ot-modes two",
+      role: "radiogroup",
+      "aria-label": _("Navigation"),
+    },
+    opts.map((o) => {
+      const tile = E("span", { class: "ot-tile" });
+      tile.innerHTML = navSketch(o.value);
+      const radio = E("input", {
+        type: "radio",
+        name: name,
+        value: o.value,
+        "aria-label": o.label,
+        checked: o.value == value ? "" : null,
+        change: () => onChange(o.value),
+      });
+      return E("label", { class: "ot-mode", title: o.label }, [radio, tile]);
+    }),
+  );
+}
+
 /* ── Feedback ── */
 
 function toast(text, type) {
@@ -1017,6 +1120,7 @@ return baseclass.extend({
   sizeField: sizeField,
   slider: slider,
   modePicker: modePicker,
+  navPicker: navPicker,
   toast: toast,
   copyText: copyText,
   hexToHsv: hexToHsv,

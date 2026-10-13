@@ -601,3 +601,198 @@ html:not([data-darkmode="true"]) #theme-toggle-btn .theme-icon-dark {
 #view > div.right:has(> :is(button, .btn, .cbi-button)) {
   @apply mb-4! flex flex-wrap items-center justify-end gap-2;
 }
+
+/* ── Navbar layout ──────────────────────────────────────────────────
+   Appearance › Navigation › Navbar: html[data-nav="navbar"] from header.ut,
+   desktop only (phones keep the drawer). The same #sidebar markup, laid out
+   as floating pills over the page: the rail becomes a brand pill (logo +
+   hostname) and a section pill along the top; hovering or clicking a
+   section drops its page list under it (sidebar-outline.js, the collapsed
+   rail's popover). On the right: the top bar's indicators (incl. LuCI's
+   poll pause/resume) and the theme switch, then search (⌘K) and logout. The
+   page scrolls under the pills and they blur what passes beneath. */
+
+/* Labels the rail only shows as a navbar. */
+.sidebar-rail-label {
+  @apply hidden;
+}
+
+html[data-nav="navbar"] {
+  /* The side pills line up with the content column (920px, centred; its
+     20px padding on narrower windows) -- unless the row needs more room:
+     --nav-reserve (sidebar-outline.js) is half the section pill plus the
+     wider side group, and the edge gives way to it, down to 12px. */
+  @apply md:bg-background md:[--nav-edge:max(12px,min(max(20px,calc(50%_-_460px)),calc(50%_-_var(--nav-reserve,0px))))];
+
+  #sidebar {
+    @apply md:pointer-events-none md:fixed md:inset-0 md:z-30 md:block md:h-auto md:w-auto md:overflow-visible md:bg-transparent;
+  }
+
+  /* Floating surface shared by every pill. */
+  .sidebar-rail-home,
+  .sidebar-rail-nav,
+  .sidebar-footer .sidebar-logout,
+  #sidebar button.cmdk-trigger,
+  .topbar-indicators span[data-indicator],
+  #theme-toggle-btn {
+    @apply md:bg-elevated-a90 md:border-border md:pointer-events-auto md:border md:shadow-sm md:backdrop-blur-xl;
+  }
+
+  .sidebar-rail {
+    @apply md:pointer-events-none md:absolute md:top-3 md:left-(--nav-edge) md:h-10 md:w-auto md:flex-row md:items-center md:gap-2 md:border-r-0 md:p-0;
+  }
+
+  .sidebar-rail-sep {
+    @apply md:hidden;
+  }
+
+  /* Brand pill: logo and hostname, the logo's ink and the text's ink
+     equally far (~13.5px) from either end. */
+  .sidebar-rail-home {
+    @apply text-foreground md:h-10 md:w-auto md:gap-2 md:rounded-full md:px-3;
+
+    &:hover {
+      @apply md:bg-elevated;
+    }
+
+    .sidebar-rail-label {
+      @apply md:inline md:max-w-48 md:truncate md:text-sm md:leading-5 md:font-medium;
+    }
+  }
+
+  /* Section pill, centred on the page: one segment per top-level LuCI
+     section, the current page's filled the way a segmented control marks
+     its choice. Sized to its content: a box at left:50% would otherwise
+     shrink to half the window and spill its labels. */
+  .sidebar-rail-nav {
+    @apply md:fixed md:top-3 md:left-1/2 md:h-10 md:w-max md:-translate-x-1/2 md:flex-row md:gap-0.5 md:rounded-full md:p-1;
+  }
+
+  #sidebar .sidebar-rail-item {
+    @apply text-nav-text md:h-8 md:w-auto md:gap-1.5 md:rounded-full md:pr-3 md:pl-2.5 md:text-sm md:leading-5;
+
+    img {
+      @apply md:size-4;
+    }
+
+    .sidebar-rail-label {
+      @apply md:inline md:whitespace-nowrap;
+    }
+
+    &.is-shown {
+      @apply text-foreground md:bg-soft-hover;
+    }
+  }
+
+  /* Labels are visible: no tooltips on the brand and the sections. */
+  .sidebar-rail-home::after,
+  .sidebar-rail-item::after {
+    @apply md:hidden;
+  }
+
+  /* The row doesn't fit with labels (sidebar-outline.js): the sections go
+     icon-only, a section's name heading its popover; the brand keeps its. */
+  &[data-nav-compact] #sidebar .sidebar-rail-item {
+    @apply md:w-8 md:justify-center md:px-0;
+
+    .sidebar-rail-label {
+      @apply md:hidden;
+    }
+  }
+
+  /* No panel: its page lists drop from the section pill instead. Only the
+     search button stays, as a pill on the right. */
+  #sidebar .sidebar-panel,
+  .sidebar-header {
+    @apply md:contents;
+  }
+
+  .sidebar-nav,
+  .sidebar-brand,
+  #sidebar-toggle-btn {
+    @apply md:hidden;
+  }
+
+  /* Right pills, from the edge: logout, search, then the top bar's. */
+  .sidebar-footer {
+    @apply md:pointer-events-none md:fixed md:top-3 md:right-(--nav-edge) md:mt-0;
+  }
+
+  .sidebar-footer .sidebar-logout,
+  #sidebar button.cmdk-trigger {
+    @apply md:size-10 md:rounded-full;
+
+    &::after {
+      @apply md:top-[calc(100%+8px)] md:right-0 md:left-auto md:translate-x-0 md:translate-y-0;
+    }
+  }
+
+  #sidebar button.cmdk-trigger {
+    @apply md:fixed md:top-3 md:right-[calc(var(--nav-edge)+48px)];
+
+    &:hover {
+      @apply md:bg-elevated;
+    }
+  }
+
+  .card-header {
+    @apply md:pointer-events-none md:fixed md:top-3 md:right-[calc(var(--nav-edge)+96px)] md:z-30 md:h-10 md:bg-transparent md:p-0;
+  }
+
+  .card-header-left {
+    @apply md:hidden;
+  }
+
+  .card-header-right,
+  .topbar-indicators {
+    @apply md:gap-2;
+  }
+
+  .topbar-indicators span[data-indicator],
+  #theme-toggle-btn {
+    @apply md:size-10;
+  }
+
+  .content-card {
+    @apply md:border-l-0;
+  }
+
+  /* Under the pills; the column still scrolls beneath them. The gutter is
+     kept on both edges so the column centres on the page, under the
+     section pill, whatever the scrollbar takes. */
+  #maincontent {
+    @apply md:[scrollbar-gutter:stable_both-edges] md:pt-24;
+  }
+
+  /* Once the page has scrolled (html[data-scrolled], sidebar-outline.js) a
+     progressive blur eases in behind the pills: three stacked backdrop
+     layers (2 / 6 / 12px), each masked a little shorter, so the blur is
+     strongest at the very top and thins out over 120px -- a gradient, not a
+     band -- with the page colour fading in over the top of it. Text passing
+     under the pills never collides with their labels. */
+  #main-wrapper::before,
+  #main-wrapper::after,
+  .content-card::before {
+    @apply md:pointer-events-none md:fixed md:inset-x-0 md:top-0 md:z-20 md:h-30 md:opacity-0 md:content-[''] md:[transition:opacity_.5s_cubic-bezier(.4,0,.2,1)];
+  }
+
+  #main-wrapper::before {
+    @apply md:[mask-image:linear-gradient(#000_45%,transparent)] md:backdrop-blur-[2px];
+  }
+
+  .content-card::before {
+    @apply md:[mask-image:linear-gradient(#000_25%,transparent_75%)] md:backdrop-blur-[6px];
+  }
+
+  #main-wrapper::after {
+    @apply md:bg-[linear-gradient(var(--background),transparent)] md:[mask-image:linear-gradient(#000_10%,transparent_55%)] md:backdrop-blur-[12px];
+  }
+
+  &[data-scrolled] {
+    #main-wrapper::before,
+    #main-wrapper::after,
+    .content-card::before {
+      @apply md:opacity-100;
+    }
+  }
+}

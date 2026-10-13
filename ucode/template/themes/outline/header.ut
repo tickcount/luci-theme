@@ -51,6 +51,7 @@
 	const appearance = ocfg.get_all('outline', 'appearance') ?? {};
 	const default_mode = { light: 'light', dark: 'dark' }[appearance.mode] ?? 'device';
 	const reduced_motion = { on: 'true', off: 'false' }[appearance.reduced_motion];
+	const nav_mode = appearance.navigation == 'sidebar' ? 'sidebar' : 'navbar';
 
 	const SEL = { light: ':root:not([data-darkmode="true"])', dark: ':root[data-darkmode="true"]' };
 	const FONT_RE = /^[A-Za-z0-9 ,"'_.\-]{1,200}$/;
@@ -153,7 +154,7 @@
 -%}
 
 <!DOCTYPE html>
-<html lang="{{ dispatcher.lang }}" data-outline-media="{{ media }}" data-default-theme="{{ default_mode }}"{% if (reduced_motion): %} data-reduced-motion="{{ reduced_motion }}"{% endif %}>
+<html lang="{{ dispatcher.lang }}" data-outline-media="{{ media }}" data-default-theme="{{ default_mode }}" data-nav="{{ nav_mode }}"{% if (reduced_motion): %} data-reduced-motion="{{ reduced_motion }}"{% endif %}>
 	<head>
 		<meta charset="utf-8">
 		<meta name="theme-color" content="{{ theme_color_light }}" media="(prefers-color-scheme: light)">
@@ -174,7 +175,8 @@
 				var theme = localStorage.getItem('outline.theme') || document.documentElement.getAttribute('data-default-theme') || 'device';
 				var dark = theme === 'dark' || (theme === 'device' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 				document.documentElement.setAttribute('data-darkmode', dark ? 'true' : 'false');
-				var collapsed = localStorage.getItem('outline.sidebar') === 'true';
+				/* A navbar has no collapsed state (Appearance › Navigation). */
+				var collapsed = localStorage.getItem('outline.sidebar') === 'true' && document.documentElement.getAttribute('data-nav') !== 'navbar';
 				document.documentElement.setAttribute('data-sidebar-collapsed', collapsed ? 'true' : 'false');
 			})();
 		</script>
@@ -237,7 +239,7 @@
 					if (!raw) return;
 					var cache = JSON.parse(raw);
 					var sb = document.getElementById('sidebar');
-					if (!sb || !cache || cache.v !== 4 || cache.lang !== document.documentElement.lang) return;
+					if (!sb || !cache || cache.v !== 6 || cache.lang !== document.documentElement.lang) return;
 
 					sb.innerHTML = cache.html;
 					/* The cached HTML holds the logo of the page that cached it. */
