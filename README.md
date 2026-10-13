@@ -58,25 +58,35 @@
 
 ## Installation
 
-Run these commands on the router itself (e.g. over an SSH session).
-
-### Via a GitHub release
-
-OpenWrt 25.12+ and snapshots use `apk`; older versions use `opkg`.
-
-> **Tip**: Run `opkg --version` or `apk --version` to check which package manager your device has.
+Run this on the router itself (e.g. over an SSH session):
 
 ```sh
-cd /tmp
-
-# opkg
-uclient-fetch -O luci-theme-outline.ipk https://github.com/tickcount/luci-theme/releases/latest/download/luci-theme-outline_1.0.3-r20261013_all.ipk
-opkg install luci-theme-outline.ipk
-
-# apk
-uclient-fetch -O luci-theme-outline.apk https://github.com/tickcount/luci-theme/releases/latest/download/luci-theme-outline-1.0.3-r20261013.apk
-apk add --allow-untrusted luci-theme-outline.apk
+wget -qO- https://raw.githubusercontent.com/tickcount/luci-theme-outline/master/install.sh | sh
 ```
+
+The script picks the `.ipk` (opkg, OpenWrt ≤ 24.10) or `.apk` (apk, 25.12+) from the latest release, verifies its checksum, installs it and makes Outline the active LuCI theme. Run it again to update. To remove the theme, pass an option after `sh -s --`:
+
+```sh
+wget -qO- https://raw.githubusercontent.com/tickcount/luci-theme-outline/master/install.sh | sh -s -- --uninstall
+```
+
+| Option          | Effect                                                       |
+| :-------------- | :----------------------------------------------------------- |
+| `--no-activate` | install without switching LuCI to Outline                    |
+| `--uninstall`   | remove the theme; its settings stay in `/etc/config/outline` |
+| `--purge`       | remove the theme, its settings and uploaded brand images     |
+
+After that, updates, switching the theme on or off and removal are in LuCI under **System › Outline Theme › Package**.
+
+## Settings
+
+**System › Outline Theme** — the theme's own settings, after ChatGPT/Codex _Settings › Appearance_:
+
+- **Appearance** — Mode (System / Light / Dark), a theme preset (Outline, ChatGPT and the Codex collection: Absolutely, Ayu, Catppuccin, Dracula, Everforest, GitHub, Gruvbox, Linear, Nord, Rose Pine, Solarized, Tokyo Night, Vercel, …), accent, background and foreground colours with a colour picker, fonts, UI / content / code font sizes, contrast, reduce motion, and separate light and dark themes. Themes copy and import as `outline-theme-v1:` strings; Codex `codex-theme-v1:` strings import too.
+- **Branding** — the logo (Outline, OpenWrt's, or an upload) and one app icon from which every favicon and home-screen size is generated.
+- **Package** — check for updates, update, switch LuCI to or away from Outline, uninstall.
+
+Changes preview on the settings page only and are stored with LuCI's own **Save** / **Save & Apply**. How it works: [.dev/docs/settings.md](.dev/docs/settings.md).
 
 ## Build from source
 

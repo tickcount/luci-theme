@@ -65,6 +65,9 @@ html {
      ChatGPT's pixel grid (h-9 = 36px); body copy is 14px. */
   @apply bg-sidebar-bg text-foreground font-sans antialiased;
   font-feature-settings: "kern", "liga", "calt";
+  /* Code, logs and config editors. Appearance › Code font size overrides it
+     from the #outline-appearance sheet. */
+  --font-size-code: 13px;
 
   body {
     @apply text-sm leading-5;
@@ -140,11 +143,11 @@ p {
 }
 
 pre {
-  @apply border-border bg-muted text-foreground block rounded-xl border px-3 py-2 font-mono text-[13px] leading-5 break-words whitespace-pre-wrap;
+  @apply border-border bg-muted text-foreground block rounded-xl border px-3 py-2 font-mono text-(length:--font-size-code) leading-5 break-words whitespace-pre-wrap;
 }
 
 code {
-  @apply bg-muted text-foreground rounded-md px-1.5 py-0.5 font-mono text-[13px];
+  @apply bg-muted text-foreground rounded-md px-1.5 py-0.5 font-mono text-(length:--font-size-code);
 }
 
 a {
@@ -158,7 +161,7 @@ var {
 tt,
 kbd,
 samp {
-  @apply font-mono text-[13px];
+  @apply font-mono text-(length:--font-size-code);
 }
 
 small {

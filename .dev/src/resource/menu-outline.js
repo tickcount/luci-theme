@@ -166,7 +166,7 @@ return baseclass.extend({
         E("a", { class: "sidebar-rail-home", href: "/", "aria-label": host }, [
           E("img", {
             class: "sidebar-logo",
-            src: `${media}/images/logo.png`,
+            src: sidebar.dataset.logo || `${media}/images/logo.png`,
             alt: "",
             width: "20",
             height: "20",
@@ -867,7 +867,10 @@ return baseclass.extend({
     const trimmed = this.palInput.value.trimStart();
     const cmdOnly = trimmed.startsWith(">");
     const q = (cmdOnly ? trimmed.slice(1) : trimmed).trim().toLowerCase();
-    const themeNow = localStorage.getItem("outline.theme") || "device";
+    const themeNow =
+      localStorage.getItem("outline.theme") ||
+      document.documentElement.dataset.defaultTheme ||
+      "device";
 
     // A section pill narrows everything to that section's pages; the
     // theme commands only show under "All".

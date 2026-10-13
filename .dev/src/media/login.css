@@ -107,8 +107,9 @@ body {
 .login-logo {
   @apply mb-4 flex size-12 shrink-0 items-center justify-center;
 
+  /* Same app-icon rounding as the sidebar logo. */
   img {
-    @apply size-12;
+    @apply size-12 rounded-[22%] object-contain;
   }
 }
 

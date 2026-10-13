@@ -232,7 +232,7 @@ div:has(> input.cbi-input-password + .cbi-button) {
 
     > span,
     > code {
-      @apply pointer-events-none w-full rounded bg-transparent p-0 font-mono text-[13px] leading-5;
+      @apply pointer-events-none w-full rounded bg-transparent p-0 font-mono text-(length:--font-size-code) leading-5;
     }
   }
 
@@ -276,7 +276,7 @@ div:has(> input.cbi-input-password + .cbi-button) {
       @apply bg-foreground-a10 h-1 rounded-full;
     }
     &::-moz-range-progress {
-      @apply bg-foreground h-1 rounded-full;
+      @apply bg-accent h-1 rounded-full;
     }
     &::-webkit-slider-thumb {
       @apply border-border -mt-1.5 size-4 appearance-none rounded-full border bg-white shadow-md;

@@ -78,8 +78,10 @@ html[data-sidebar-collapsed="true"] #sidebar {
   }
 }
 
+/* Rounded like an app icon: a square logo (OpenWrt's, an upload) gets the
+   corners the cat draws itself; object-fit keeps any picture inside. */
 #sidebar .sidebar-logo {
-  @apply size-5 opacity-100;
+  @apply size-5 rounded-[22%] object-contain opacity-100;
 }
 
 .sidebar-rail-sep {

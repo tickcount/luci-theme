@@ -16,7 +16,7 @@ pnpm build            # Clean + build production assets to htdocs/luci-static/
 pnpm clean            # Remove build output only
 pnpm gen:tokens       # Regenerate src/media/_tokens.css from tokens/*.js
 pnpm check:contrast   # Check muted text tokens meet WCAG AA contrast
-pnpm test             # node --test tests/*.test.js (router resolver, gates, contract)
+pnpm test             # node --test tests/*.test.js (build output, palette, settings pages)
 ```
 
 ## Layout
@@ -31,6 +31,7 @@ Details — output map, load-bearing terser options, dev-server env, Vite plugin
 - **Page patches**: per-page third-party fixes in `src/media/patches/<page>.css` (+ optional `<page>.js`), discovered at render time by `header.ut`, not bundled into `main.css`. This is the one place that writes **plain CSS**, not `@apply`. → **[.dev/docs/patches.md](.dev/docs/patches.md)**
 - **Client-side router**: `router-outline.js` turns navigation between LuCI **view** pages into same-document swaps via the Navigation API; every other case (call/cbi/function pages, no API, a poisoned document, an expired session) stays a full load. **Read the doc before touching navigation, teardown, page-scoped patches, `header.ut`'s `<head>`, or `#maincontent`'s scroll** — it depends on template hooks (`data-outline-shell`, `body[data-asset-version]`, `body[data-patches]`, `#maincontent[tabindex=-1]`) and on `menu-outline.js` keeping `syncRoute()`/`closeSurfaces()` working. Budget: 15 KB built. → **[.dev/docs/router.md](.dev/docs/router.md)**
 - **Sidebar & menu**: built client-side in `menu-outline.js`; `header.ut` replays a `sessionStorage` cache pre-paint to avoid a flash. Bump the cache `v` whenever the sidebar markup changes shape. → **[.dev/docs/sidebar.md](.dev/docs/sidebar.md)**
+- **Settings pages** (System › Outline Theme: Appearance, Branding, Package): JS in `src/resource/outline/` + `src/resource/view/outline/`, rpcd backend in `root/`, CSS overrides assembled in `header.ut` by a ucode copy of `palette.assemble()` — keep the two in step. → **[.dev/docs/settings.md](.dev/docs/settings.md)**
 - **Mock pages**: style a third-party app's page without having the app or a device — snapshots in `.dev/mocks/`, served at `/mocks/`. Snapshots are not portable between themes. → **[.dev/docs/mock-pages.md](.dev/docs/mock-pages.md)**
 
 ## Key references

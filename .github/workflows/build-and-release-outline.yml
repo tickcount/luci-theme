@@ -63,6 +63,19 @@ jobs:
           # Artifacts keep their bin/packages/<arch>/outline/ layout.
           mapfile -t files < <(find dist -type f \( -name '*.ipk' -o -name '*.apk' \))
           [ "${#files[@]}" -gt 0 ] || { echo "no packages to release" >&2; exit 1; }
+          # manifest.json: what install.sh and System › Outline Theme ›
+          # Package read first -- served from the CDN (no API rate limit) and
+          # carrying a sha256 per package, which both verify before installing.
+          manifest="$RUNNER_TEMP/manifest.json"
+          for f in "${files[@]}"; do
+            n="$(basename "$f")"
+            jq -n --arg name "$n" \
+              --arg url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${n}" \
+              --arg sha256 "$(sha256sum "$f" | cut -d' ' -f1)" \
+              --argjson size "$(stat -c%s "$f")" \
+              '{name: $name, url: $url, sha256: $sha256, size: $size}'
+          done | jq -s --arg tag "$TAG" '{name: "luci-theme-outline", tag: $tag, files: .}' > "$manifest"
+          files+=("$manifest")
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${files[@]}" --clobber
           else

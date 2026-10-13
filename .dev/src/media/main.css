@@ -17,7 +17,12 @@
 @source not "../../vite.config.ts";
 @source not "../../scripts/*.client.js";
 @source not "../../tests/*.js";
-@source not "../../docs/*.md";
+@source not "../../docs/**/*";
+/* The System › Outline Theme pages style themselves (ot-* classes in
+   outline/ui.js); their sources are full of class-like words that must not
+   become utilities. */
+@source not "../resource/outline";
+@source not "../resource/view";
 
 @custom-variant dark (&:where([data-darkmode=true], [data-darkmode=true] *));
 

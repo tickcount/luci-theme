@@ -1,13 +1,31 @@
 /* Everything still transitions, for 1ms: luci-base acts on transitionend
-   (dropdown focus, notification removal), which transition: none never fires. */
+   (dropdown focus, notification removal), which transition: none never fires.
+   html[data-reduced-motion] is Appearance › Reduce motion: "true" forces it,
+   "false" opts out of the system preference, absent follows the system. */
 @media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduced-motion="false"]) {
+    &,
+    *,
+    ::before,
+    ::after {
+      @apply [transition-delay:0s]! [transition-duration:1ms]! [animation-delay:0s]! [animation-duration:1ms]!;
+    }
+
+    /* A loading spinner is state, not decoration. */
+    .spinning::before {
+      @apply [animation-duration:1s]!;
+    }
+  }
+}
+
+:root[data-reduced-motion="true"] {
+  &,
   *,
   ::before,
   ::after {
     @apply [transition-delay:0s]! [transition-duration:1ms]! [animation-delay:0s]! [animation-duration:1ms]!;
   }
 
-  /* A loading spinner is state, not decoration. */
   .spinning::before {
     @apply [animation-duration:1s]!;
   }

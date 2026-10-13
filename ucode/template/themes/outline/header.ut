@@ -6,7 +6,8 @@
 
 {%
 	import { getuid, getspnam } from 'luci.core';
-	import { lsdir } from 'fs';
+	import { lsdir, readfile, writefile, access } from 'fs';
+	import { cursor } from 'uci';
 
 	const boardinfo = ubus.call('system', 'board') ?? {};
 	const rootsp = getspnam('root');
@@ -37,15 +38,126 @@
 		sort(patch_all);
 	}
 
+	// Appearance settings (System › Outline Theme › Appearance). Absent config = stock look.
+	// The app derives the colours in the browser and stores the result as
+	// `list token 'name=#value'` per variant; this block only assembles the
+	// override sheet. It is a line-for-line copy of assemble() in
+	// outline/palette.js (.dev/src/resource) and must emit the same bytes, so the page's
+	// live preview and every rendered page agree. The element is always
+	// emitted: the Appearance page rewrites it in place while previewing.
+	// (No two closing braces in a row in this block: the template lexer
+	// reads them as the end of a {{ }} tag.)
+	const ocfg = cursor();
+	const appearance = ocfg.get_all('outline', 'appearance') ?? {};
+	const default_mode = { light: 'light', dark: 'dark' }[appearance.mode] ?? 'device';
+	const reduced_motion = { on: 'true', off: 'false' }[appearance.reduced_motion];
+
+	const SEL = { light: ':root:not([data-darkmode="true"])', dark: ':root[data-darkmode="true"]' };
+	const FONT_RE = /^[A-Za-z0-9 ,"'_.\-]{1,200}$/;
+	const TOKEN_RE = /^([a-z0-9-]{1,40})=(#[0-9a-f]{6}([0-9a-f]{2})?)$/;
+	const SANS_TAIL = '"Geist Variable", -apple-system, ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif';
+	const MONO_TAIL = '"Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+	const SYSTEM_SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+	const SYSTEM_MONO = 'ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+	const int_in = (v, lo, hi, def) => { const n = +(v ?? ''); return (type(n) == 'int' && n >= lo && n <= hi) ? n : def; };
+	const num = (x) => replace(sprintf('%.4f', x), /\.?0+$/, '');
+	const size_vars = (px) => join(';', map([ [ 'xs', 12 ], [ 'sm', 14 ], [ 'base', 16 ], [ 'lg', 18 ], [ 'xl', 20 ], [ '2xl', 24 ] ],
+		(e) => `--text-${e[0]}:${num(e[1] * px / 14.0 / 16.0)}rem`));
+	const font_stack = (v, kind) => {
+		v = trim(v ?? '');
+		if (v == '' || !match(v, FONT_RE)) return null;
+		if (v == 'system') return kind == 'mono' ? SYSTEM_MONO : SYSTEM_SANS + ', "Geist Variable"';
+		return v + ', ' + (kind == 'mono' ? MONO_TAIL : SANS_TAIL);
+	};
+
+	let css_out = [];
+	const ui_px = int_in(appearance.ui_font_size, 11, 16, 14);
+	const content_px = int_in(appearance.content_font_size, 12, 24, 14);
+	const code_px = int_in(appearance.code_font_size, 8, 24, 13);
+	if (ui_px != 14) push(css_out, ':root{' + size_vars(ui_px) + '}');
+	if (ui_px != 14 || content_px != 14) push(css_out, '#maincontent{' + size_vars(content_px) + '}');
+	if (code_px != 13) push(css_out, `:root{--font-size-code:${code_px}px}`);
+
+	const theme_color = { light: '#f9f9f9', dark: '#000000' };
+	for (let v in [ 'light', 'dark' ]) {
+		const t = ocfg.get_all('outline', v) ?? {};
+		let decl = [];
+		for (let e in (type(t.token) == 'array' ? t.token : (t.token ? [ t.token ] : []))) {
+			const m = match(e, TOKEN_RE);
+			if (!m) continue;
+			push(decl, `--${m[1]}:${m[2]}`);
+			if (m[1] == 'shell') theme_color[v] = substr(m[2], 0, 7);
+		}
+		const sans = font_stack(t.font_ui, 'sans');
+		const mono = font_stack(t.font_code, 'mono');
+		if (sans) push(decl, `--font-sans:${sans}`);
+		if (mono) push(decl, `--font-mono:${mono}`);
+		if (length(decl)) push(css_out, SEL[v] + '{' + join(';', decl) + '}');
+
+		const weight = int_in(t.font_ui_weight, 100, 900, 400);
+		if (weight != 400) push(css_out, SEL[v] + ' body{font-weight:' + weight + '}');
+
+		const content_font = font_stack(t.font_content, 'sans');
+		if (content_font) push(css_out, `${SEL[v]} #maincontent{--font-sans:${content_font};font-family:var(--font-sans)}`);
+	}
+	const appearance_css = join('\n', css_out);
+	const theme_color_light = theme_color.light;
+	const theme_color_dark = theme_color.dark;
+
+	// Brand assets (System › Outline Theme › Branding): a slot names a file in
+	// /www/luci-static/outline-brand; an empty, malformed or missing one falls
+	// back to the theme's own image. `rev` busts caches when a slot changes.
+	const branding = ocfg.get_all('outline', 'branding') ?? {};
+	const brand_rev = match(branding.rev ?? '', /^[0-9]+$/) ? branding.rev : '0';
+	const brand_url = (slot, def) => {
+		const f = branding[slot];
+		return (f && match(f, /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/) && access(`/www/luci-static/outline-brand/${f}`))
+			? `/luci-static/outline-brand/${f}?v=${brand_rev}` : def;
+	};
+	// `openwrt` picks OpenWrt's logo from luci-theme-bootstrap, where installed.
+	const logo_url = (branding.logo == 'openwrt' && access('/www/luci-static/bootstrap/logo.svg'))
+		? '/luci-static/bootstrap/logo.svg' : brand_url('logo', `${media}/images/logo.png`);
+	const favicon_url = brand_url('favicon', `${media}/images/favicon.svg`);
+	const favicon_type = match(favicon_url, /\.svg(\?|$)/) ? 'image/svg+xml' : (match(favicon_url, /\.png(\?|$)/) ? 'image/png' : '');
+	const favicon_ico_url = brand_url('favicon_ico', `${media}/images/favicon.ico`);
+	const apple_touch_url = brand_url('apple_touch', `${media}/images/apple-touch-icon.png`);
+	// The installed web app's manifest follows the PWA slots and name. It is
+	// written here, on render, whenever the committed settings no longer
+	// match the file -- after Save & Apply the next page brings it up to date.
+	let manifest_url = `${media}/images/site.webmanifest`;
+	const pwa_icon = (slot, size) => {
+		const f = branding[slot];
+		return (f && match(f, /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\.png$/) && access(`/www/luci-static/outline-brand/${f}`))
+			? { src: `${f}?v=${brand_rev}`, sizes: size, type: 'image/png', purpose: 'any maskable' } : null;
+	};
+	const app_name = match(branding.app_name ?? '', /^[^<>"&\\[:cntrl:]]{1,40}$/) ? branding.app_name : null;
+	let pwa_icons = filter([ pwa_icon('pwa_192', '192x192'), pwa_icon('pwa_512', '512x512') ], (i) => i != null);
+	if (length(pwa_icons) || app_name) {
+		if (!length(pwa_icons))
+			pwa_icons = [
+				{ src: `${media}/images/web-app-manifest-192x192.png`, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+				{ src: `${media}/images/web-app-manifest-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+			];
+		const manifest = sprintf('%J', {
+			name: app_name ?? 'Outline', short_name: app_name ?? 'Outline', start_url: '/cgi-bin/luci/', display: 'standalone',
+			theme_color: theme_color_light, background_color: theme_color_light, icons: pwa_icons
+		});
+		const mpath = '/www/luci-static/outline-brand/site.webmanifest';
+		if (readfile(mpath) != manifest && access('/www/luci-static/outline-brand'))
+			writefile(mpath, manifest);
+		if (access(mpath))
+			manifest_url = `/luci-static/outline-brand/site.webmanifest?v=${brand_rev}`;
+	}
+
 	http.prepare_content('text/html; charset=UTF-8');
 -%}
 
 <!DOCTYPE html>
-<html lang="{{ dispatcher.lang }}" data-outline-media="{{ media }}">
+<html lang="{{ dispatcher.lang }}" data-outline-media="{{ media }}" data-default-theme="{{ default_mode }}"{% if (reduced_motion): %} data-reduced-motion="{{ reduced_motion }}"{% endif %}>
 	<head>
 		<meta charset="utf-8">
-		<meta name="theme-color" content="#f9f9f9" media="(prefers-color-scheme: light)">
-		<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+		<meta name="theme-color" content="{{ theme_color_light }}" media="(prefers-color-scheme: light)">
+		<meta name="theme-color" content="{{ theme_color_dark }}" media="(prefers-color-scheme: dark)">
 		<title>{{ striptags(((boardinfo && boardinfo.hostname) ? boardinfo.hostname : '?') + ((dispatched && dispatched.title) ? (' | ' + _(dispatched.title)) : '')) }}</title>
 		<script>
 			(function () {
@@ -59,7 +171,7 @@
 						localStorage.removeItem('shadcn.' + k);
 					});
 				} catch (e) {}
-				var theme = localStorage.getItem('outline.theme') || 'device';
+				var theme = localStorage.getItem('outline.theme') || document.documentElement.getAttribute('data-default-theme') || 'device';
 				var dark = theme === 'dark' || (theme === 'device' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 				document.documentElement.setAttribute('data-darkmode', dark ? 'true' : 'false');
 				var collapsed = localStorage.getItem('outline.sidebar') === 'true';
@@ -70,8 +182,10 @@
 		<meta name="color-scheme" content="light dark">
 		{% if (blank_page): %}
 		<link rel="stylesheet" href="{{ media }}/login.css">
+		<style id="outline-appearance" data-luci-shell>{{ appearance_css }}</style>
 		{% else %}
 		<link rel="stylesheet" href="{{ media }}/main.css" data-luci-shell>
+		<style id="outline-appearance" data-luci-shell>{{ appearance_css }}</style>
 		{% for (let patch in patch_files): %}
 		<link rel="stylesheet" href="{{ media }}/patches/{{ patch }}.css" data-luci-patch="{{ patch }}">
 		{% endfor %}
@@ -79,10 +193,10 @@
 		<script defer src="{{ media }}/patches/{{ patch }}.js" data-luci-patch="{{ patch }}"></script>
 		{% endfor %}
 		{% endif %}
-		<link rel="icon" href="{{ media }}/images/favicon.svg" type="image/svg+xml">
-		<link rel="icon" href="{{ media }}/images/favicon.ico" sizes="any">
-		<link rel="apple-touch-icon" href="{{ media }}/images/apple-touch-icon.png">
-		<link rel="manifest" href="{{ media }}/images/site.webmanifest">
+		<link rel="icon" href="{{ favicon_url }}"{% if (favicon_type): %} type="{{ favicon_type }}"{% endif %}>
+		<link rel="icon" href="{{ favicon_ico_url }}" sizes="any">
+		<link rel="apple-touch-icon" href="{{ apple_touch_url }}">
+		<link rel="manifest" href="{{ manifest_url }}">
 		{% if (dispatched && dispatched.css): %}
 		<link rel="stylesheet" href="{{ resource }}/{{ dispatched.css }}" data-luci-node-css="{{ entityencode(dispatched.css, true) }}">
 		{% endif %}
@@ -99,6 +213,7 @@
 		<div
 			id="sidebar"
 			data-media="{{ media }}"
+			data-logo="{{ logo_url }}"
 			data-hostname="{{ entityencode(striptags((boardinfo && boardinfo.hostname) ? boardinfo.hostname : 'Outline'), true) }}"
 		></div>
 		<script>
@@ -125,6 +240,9 @@
 					if (!sb || !cache || cache.v !== 4 || cache.lang !== document.documentElement.lang) return;
 
 					sb.innerHTML = cache.html;
+					/* The cached HTML holds the logo of the page that cached it. */
+					var logo = sb.querySelector('.sidebar-logo');
+					if (logo && sb.getAttribute('data-logo')) logo.setAttribute('src', sb.getAttribute('data-logo'));
 					sb.setAttribute('data-outline-built', '1');
 					sb.setAttribute('data-outline-restored', '1');
 

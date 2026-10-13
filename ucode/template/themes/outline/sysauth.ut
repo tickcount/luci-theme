@@ -4,13 +4,26 @@
  Licensed to the public under the Apache License 2.0.
 -#}
 
-{%const boardinfo = ubus.call('system', 'board') ?? {};-%}
+{%
+	import { access } from 'fs';
+	import { cursor } from 'uci';
+
+	const boardinfo = ubus.call('system', 'board') ?? {};
+	// Same rule as header.ut: a branding slot overrides the theme's logo.
+	const branding = cursor().get_all('outline', 'branding') ?? {};
+	const brand_logo = branding.logo;
+	const logo_url = (brand_logo == 'openwrt' && access('/www/luci-static/bootstrap/logo.svg'))
+		? '/luci-static/bootstrap/logo.svg'
+		: (brand_logo && match(brand_logo, /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/) && access(`/www/luci-static/outline-brand/${brand_logo}`))
+		? `/luci-static/outline-brand/${brand_logo}?v=${match(branding.rev ?? '', /^[0-9]+$/) ? branding.rev : '0'}`
+		: `${media}/images/logo.png`;
+-%}
 {% include('header', { blank_page: true }) %}
 <main class="login-layout">
 	<div class="login-column">
 		<div class="login-brand animate-element animate-delay-100">
 			<span class="login-logo">
-				<img src="{{ media }}/images/logo.png" alt="" width="48" height="48">
+				<img src="{{ logo_url }}" alt="" width="48" height="48">
 			</span>
 			<h1 class="login-hostname">{{ striptags(boardinfo?.hostname ?? 'Router') }}</h1>
 		</div>

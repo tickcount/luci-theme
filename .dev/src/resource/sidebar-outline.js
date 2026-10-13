@@ -126,17 +126,19 @@ return baseclass.extend({
   /* ── Theme ── */
 
   initTheme() {
-    const saved = localStorage.getItem(THEME_KEY) || "device";
-    this.applyTheme(saved);
+    this.applyTheme(localStorage.getItem(THEME_KEY), 1);
   },
 
-  applyTheme(theme) {
+  // No stored choice -> the router default header.ut emits (Appearance ›
+  // Mode); `keep` re-applies without pinning this browser to it.
+  applyTheme(theme, keep) {
+    theme ||= document.documentElement.dataset.defaultTheme;
     const isDark =
       theme === "dark" ||
-      (theme === "device" &&
+      (theme !== "light" &&
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.setAttribute("data-darkmode", isDark);
-    localStorage.setItem(THEME_KEY, theme);
+    keep || localStorage.setItem(THEME_KEY, theme);
   },
 
   initThemeToggle() {
@@ -149,11 +151,9 @@ return baseclass.extend({
     });
     window
       .matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", () => {
-        if ((localStorage.getItem(THEME_KEY) || "device") === "device") {
-          this.applyTheme("device");
-        }
-      });
+      .addEventListener("change", () =>
+        this.applyTheme(localStorage.getItem(THEME_KEY), 1),
+      );
   },
 
   /* ── Sidebar collapse (desktop icon rail) ── */

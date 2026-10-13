@@ -1,6 +1,6 @@
 /* ChatGPT usage meter (Settings › Usage › "Weekly limit"): a 12/16 meta line
    in secondary ink, 5px above a 6px fully rounded track on a 10% ink tint,
-   filled in solid ink. LuCI keeps the figure in the title attribute and
+   filled with the accent (Appearance › Accent recolours every meter). LuCI keeps the figure in the title attribute and
    writes the fill width inline on the first child, so the meta line is the
    ::before (top), the track the ::after (bottom), and the fill rides on
    the track. The meta line sits in flow and wraps — truncated, a phone lost
@@ -12,7 +12,7 @@
   @apply after:bg-foreground-a10 after:absolute after:inset-x-0 after:bottom-0 after:h-1.5 after:rounded-full after:content-[''];
 
   > div {
-    @apply bg-foreground absolute bottom-0 left-0 z-[1] h-1.5 max-w-full min-w-1.5 rounded-full [transition:width_.3s_var(--ease-out)];
+    @apply bg-accent absolute bottom-0 left-0 z-[1] h-1.5 max-w-full min-w-1.5 rounded-full [transition:width_.3s_var(--ease-out)];
   }
 
   /* A title-less bar (package manager's spacer) is just the track. */
