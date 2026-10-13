@@ -182,6 +182,19 @@
   @apply pt-4 pb-1;
 }
 
+/* A nested section that is nothing but its create bar (Network ›
+   Interfaces › Edit › DHCP Server before a server exists: "No DHCP Server
+   configured" + "Set up DHCP Server") is one plain row, not a group: the
+   group spacing above and the bar's own 12px put 28px over it and 4px
+   under it. */
+.cbi-value:has(> .cbi-section > .cbi-section-create:only-child) {
+  @apply py-3;
+
+  > .cbi-section > .cbi-section-create {
+    @apply mt-0;
+  }
+}
+
 #maincontent .cbi-value > .cbi-section {
   > h3 {
     @apply mb-1;
