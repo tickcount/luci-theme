@@ -72,11 +72,11 @@ const STRUCTURE = `
   --shadow-lg: 0 4px 8px -2px #0000001a;
   --shadow-xl: 0 8px 16px -4px #0000001f;
   --shadow-2xl: 0 16px 32px -8px #00000030;
-  --shadow-menu: 0 0 0 0.5px var(--border), 0 8px 16px -4px #0000001f;
-`;
-
-const DARK_STRUCTURE = `
-  --shadow-menu: inset 0 0 1px 0 #ffffff33, 0 8px 16px -4px #0000001f;
+  /* Codex's dropdown overlay: a 0.5px ring in the border ink drawn twice
+     (its ring utility plus shadow-xl-spread), then shadow-xl. */
+  --shadow-menu:
+    0 0 0 0.5px var(--border), 0 0 0 0.5px var(--border),
+    0 8px 16px -4px #0000001f;
 `;
 
 const themeColorsCss = themeColors([
@@ -124,7 +124,6 @@ const css =
   STRUCTURE +
   "}\n\n" +
   block('[data-darkmode="true"]', darkOut, darkAOut) +
-  DARK_STRUCTURE +
   "}\n\n" +
   THEME;
 

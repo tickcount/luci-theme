@@ -13,7 +13,6 @@
 				<img src="{{ media }}/images/logo.png" alt="" width="48" height="48">
 			</span>
 			<h1 class="login-hostname">{{ striptags(boardinfo?.hostname ?? 'Router') }}</h1>
-			<p class="login-subtitle">{{ _('Please enter your username and password.') }}</p>
 		</div>
 
 		<form method="post" class="login-form">

@@ -269,7 +269,7 @@ a.sidebar-nav-parent {
 /* ── Collapsed hover popover (pages of the hovered rail section) ───── */
 
 .sidebar-collapsed-popover {
-  @apply bg-elevated-secondary-a90 shadow-menu fixed z-50 min-w-48 overflow-hidden rounded-2xl p-1.5 backdrop-blur-sm;
+  @apply bg-elevated-a90 shadow-menu fixed z-50 min-w-48 overflow-hidden rounded-2xl p-1.5 backdrop-blur-sm;
 }
 
 .sidebar-collapsed-popover-title {
@@ -432,18 +432,42 @@ html:not([data-darkmode="true"]) #theme-toggle-btn .theme-icon-dark {
      break-word: an unbroken token (AmneziaWG's public key, a long URL)
      wraps where it would otherwise run off a phone — it does not shrink
      table columns, which size on whole words. */
-  @apply @container flex-1 [scrollbar-gutter:stable] overflow-y-auto px-5 pt-2 pb-16 wrap-break-word max-md:px-4;
+  @apply @container flex-1 [scrollbar-gutter:stable] overflow-y-auto px-5 pt-8 pb-16 wrap-break-word max-md:px-4 max-md:pt-6;
 
   > * {
     @apply mx-auto w-full max-w-[920px];
   }
 
-  /* Page title: LuCI views open with <h2 name="content">; ChatGPT's settings
-     header is 24/28.8 medium in a 60px band. */
+  /* Page title: LuCI views open with <h2 name="content"> — straight in
+     #maincontent after its noscript / tab menu / script siblings
+     (Overview's "Status", so never :first-child there) or as a view's or
+     map's first child. ChatGPT's settings header (settings/account): 24/28.8
+     medium, 32px under the top of the column (the column's padding), ~48px
+     above the first section title; a description sits 4px under it and
+     takes over that gap. */
+  h2[name="content"],
   > #view > h2:first-child,
   > #view > :is(div, .cbi-map, p) > h2:first-child,
   > h2:first-child {
-    @apply mt-2 mb-5 border-0 pl-0 text-2xl leading-[1.2] font-medium;
+    @apply mt-0 mb-12 border-0 pl-0 text-2xl leading-[1.2] font-medium;
+
+    &:has(+ :is(.cbi-map-descr, p:not(.spinning))) {
+      @apply mb-1;
+    }
+
+    /* Tabs straight under the title belong to it (Backup / Flash
+       Firmware): 24px, not the section gap. */
+    &:has(+ .cbi-tabmenu) {
+      @apply mb-6;
+    }
+
+    + :is(.cbi-map-descr, p:not(.spinning)) {
+      @apply mt-0 mb-12;
+
+      &:has(+ .cbi-tabmenu) {
+        @apply mb-6;
+      }
+    }
   }
 
   h2 {

@@ -73,7 +73,9 @@ test("production assets stay within raw-transfer budgets", () => {
   assert.ok(router <= 16_000, `router-outline.js ${router} B exceeds 16 KB`);
   // 7K: independent group folds (persisted) and the rail's logo-to-expand
   // control for the ChatGPT sidebar.
-  assert.ok(sidebar <= 7_000, `sidebar-outline.js ${sidebar} B exceeds 7 KB`);
+  // 7.5K: the dropdown viewport clamp (an open LuCI list past the screen
+  // edge is capped and nudged back inside) added ~0.7 KB.
+  assert.ok(sidebar <= 7_500, `sidebar-outline.js ${sidebar} B exceeds 7.5 KB`);
   assert.ok(
     // 232.5K (was 217.5K under Inter): Geist saves 19 KB, the full ChatGPT
     // restyle (CSS + rail/palette JS) spends ~24 KB.

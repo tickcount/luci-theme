@@ -1,7 +1,8 @@
 /* LuCI dropdown (ui.Dropdown / Combobox / ComboButton). Closed it is the
-   ChatGPT selector pill; open, its list is ChatGPT's menu: 16px corners,
-   6px gutter, 12px-cornered 36px rows, a 90% elevated fill behind an 8px
-   blur, and a check on the selected row. */
+   ChatGPT selector pill; open, its list is Codex's dropdown overlay: 16px
+   corners, 6px gutter, 12px-cornered 36px rows, a 90% elevated fill behind
+   an 8px blur, a hairline ring in the border ink plus shadow-xl
+   (--shadow-menu), and a check on the selected row. */
 .cbi-dropdown {
   @apply relative inline-flex h-fit max-w-full min-w-fit shrink-0 cursor-pointer items-center p-0 whitespace-nowrap outline-none [transition:background-color_.15s,box-shadow_.15s];
 
@@ -76,12 +77,15 @@
        like ChatGPT's; LuCI's own inline max-height only stops it at the
        viewport edge, so the cap overrides it. */
     &.dropdown {
-      @apply bg-elevated-secondary-a90 shadow-menu absolute left-0 z-[60] mt-1 max-h-[min(60vh,24rem)]! w-fit min-w-full overflow-y-auto rounded-2xl border-0 p-1.5 opacity-100 backdrop-blur-sm;
+      @apply bg-elevated-a90 shadow-menu absolute left-0 z-[60] mt-1 max-h-[min(60vh,24rem)]! w-fit min-w-full overflow-y-auto rounded-2xl border-0 p-1.5 opacity-100 backdrop-blur-sm;
 
       > li {
-        @apply text-foreground min-h-9 w-full cursor-pointer rounded-xl px-2.5 py-1.5 text-sm leading-5 font-normal [transition:background-color_.1s];
+        @apply text-foreground min-h-9 w-full cursor-pointer rounded-xl px-2.5 py-1.5 text-sm leading-5 font-normal outline-none [transition:background-color_.1s];
 
+        /* luci-base focuses the item under the pointer or arrow keys: like
+           Codex's menus it is marked by the hover fill, not a focus ring. */
         &:hover,
+        &:focus,
         &.focus {
           @apply bg-sidebar-accent;
         }
@@ -118,7 +122,9 @@
 
   &[open] {
     > ul.dropdown {
-      @apply block w-auto max-w-none;
+      /* Viewport-capped (sidebar-outline.js also nudges it inside a
+         16px gutter); long item blurbs wrap instead of running off. */
+      @apply block w-auto max-w-[calc(100vw-2rem)];
 
       > li {
         @apply flex;
@@ -134,8 +140,17 @@
         .hide-open {
           @apply hidden;
         }
+        /* LuCI's inline min-width: 25vw made a two-line item 640px wide
+           on a 2560px screen, wider than the content column. */
         .hide-close {
-          @apply block;
+          @apply block min-w-[min(25vw,20rem)]!;
+
+          /* Title + blurb items (Firewall's flow offloading types): the
+             blurb under the bold title is secondary ink, like page
+             descriptions. */
+          > strong ~ span {
+            @apply text-muted-foreground;
+          }
         }
       }
     }

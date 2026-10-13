@@ -27,8 +27,10 @@ table.table,
     }
   }
 
+  /* A named table's "Name" title is drawn by the row's ::before: it reads
+     as a column title like the th beside it, not as row content. */
   .cbi-section-table-titles.named {
-    @apply before:rounded-tl-2xl;
+    @apply before:text-text-tertiary before:rounded-tl-2xl;
   }
 
   /* Stacked, a named row's title (ACME's "example_wildcard") heads the
@@ -76,7 +78,24 @@ table.table,
         @apply before:border-b-0 @3xl:before:rounded-bl-2xl;
       }
       .td {
-        @apply border-b-0 @3xl:first:rounded-bl-2xl @3xl:last:rounded-br-2xl;
+        @apply border-b-0 @3xl:last:rounded-br-2xl;
+      }
+      /* A named row's ::before title holds the corner, not its first td. */
+      &:not([data-title]) .td {
+        @apply @3xl:first:rounded-bl-2xl;
+      }
+    }
+
+    /* Likewise the title thead's row is its last child but not the
+       table's bottom edge: it keeps its hairline (Port Forwards' "Name"
+       title cell lost it, breaking the line under the header) and square
+       bottom corners. */
+    .thead:not(:last-child) > &:last-child {
+      &[data-title] {
+        @apply before:border-b @3xl:before:rounded-bl-none;
+      }
+      .td {
+        @apply border-b @3xl:rounded-b-none;
       }
     }
 
@@ -96,6 +115,15 @@ table.table,
       /* Padding-box fill: the row's hairline is the cell's own bottom
          border, which the hover fill painted over. */
       @apply @3xl:bg-sidebar-accent bg-clip-padding;
+    }
+
+    /* A named row's title cell is its ::before: it takes the same fill,
+       or the hovered row read as two blocks (Traffic Rules). */
+    &[data-title] {
+      @apply before:bg-clip-padding before:[transition:background-color_.15s];
+    }
+    &[data-title]:not(.cbi-section-table-titles, .placeholder):hover {
+      @apply @3xl:before:bg-sidebar-accent;
     }
 
     &.placeholder .td {

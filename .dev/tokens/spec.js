@@ -16,7 +16,7 @@ const common = {
   primary: ["const", "var:brand"],
   primary_foreground: ["const", "var:on_brand"],
   primary_hover: ["const", "var:brand_hover"],
-  panel_bg: ["const", "var:surface"],
+  panel_bg: ["const", "var:panel_fill"],
   panel_border: ["const", "var:border"],
   muted: ["const", "var:soft"],
   muted_foreground: ["const", "var:text_secondary"],
@@ -63,5 +63,5 @@ export const ALPHAS = {
   success: [15],
   warning: [15],
   info: [15, 40],
-  "elevated-secondary": [90],
+  elevated: [90],
 };

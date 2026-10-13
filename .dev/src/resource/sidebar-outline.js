@@ -28,6 +28,7 @@ return baseclass.extend({
     this.initMobileDrawer();
     this.initThemeToggle();
     this.initTabReveal();
+    this.initDropdownClamp();
   },
 
   /* ── Tab rows ── */
@@ -63,6 +64,63 @@ return baseclass.extend({
       attributes: true,
       attributeFilter: ["class"],
     });
+  },
+
+  /* ── Dropdown menus ── */
+
+  // LuCI places an open ui.Dropdown list only vertically (top/bottom and
+  // max-height; on touch screens it spans the viewport). Horizontally it
+  // hangs off the trigger's left edge and grows with its longest item, so
+  // a right-hand select (Firewall › Flow offloading type) ran past the
+  // viewport. Once open, cap it to the visible area less a 16px gutter
+  // each side and nudge it back inside with `translate` — properties LuCI
+  // never writes, so its own positioning stays intact.
+  initDropdownClamp() {
+    const clamp = (sb) => {
+      // The list is the first ul (LuCI inserts its .preview clone after
+      // it) and carries .dropdown only while open — found by that class,
+      // a closed trigger kept the shift and its value slid out of it.
+      const ul = sb.querySelector(":scope > ul");
+      const s = ul?.style;
+      if (!s) return;
+      s.translate = s.maxWidth = "";
+      if (!ul.classList.contains("dropdown")) return;
+      // LuCI's touch path (any 'ontouchstart' browser, desktops included)
+      // stretches the list across the viewport with inline left/right;
+      // like Codex's menus it hangs from its own trigger instead.
+      s.left = s.right = "";
+      // Inside the box that clips it (the scrolling #maincontent, a
+      // dialog; both lie within the viewport): pushed past its left edge,
+      // the list was cut off under the sidebar.
+      const c = (
+        sb.closest(".modal") || document.getElementById("maincontent")
+      ).getBoundingClientRect();
+      const lo = c.left + 16;
+      const hi = c.right - 16;
+      s.maxWidth = `${hi - lo}px`;
+      const r = ul.getBoundingClientRect();
+      const dx = Math.max(Math.min(0, hi - r.right), lo - r.left);
+      if (dx) s.translate = `${dx}px 0`;
+    };
+    // Applied and undone in the observer's microtask, before the frame is
+    // painted: deferred to rAF, an opening list showed a frame at LuCI's
+    // spot and a closing one's value a frame shifted. Re-checked two frames
+    // on, once LuCI has sized the list's height (a scrollbar can appear).
+    new MutationObserver((records) =>
+      records.forEach(({ target: t }) => {
+        if (!t.classList.contains("cbi-dropdown")) return;
+        clamp(t);
+        if (t.hasAttribute("open"))
+          requestAnimationFrame(() => requestAnimationFrame(() => clamp(t)));
+      }),
+    ).observe(document.body, { subtree: true, attributeFilter: ["open"] });
+    // That touch path closes an open list only on a touchstart outside it:
+    // a touch-capable desktop browser driven by a mouse (Brave on a Mac)
+    // never sends one, so a click outside left the list open for good.
+    // Clicks inside a list never get here: LuCI stops them at its trigger.
+    addEventListener("click", () =>
+      L.ui?.Dropdown?.prototype.closeAllDropdowns(),
+    );
   },
 
   /* ── Theme ── */

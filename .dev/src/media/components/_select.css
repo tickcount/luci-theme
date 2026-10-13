@@ -21,3 +21,65 @@ select {
 [data-darkmode="true"] select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23787878' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
+
+/* Customizable select (Chromium 135+): the native popup becomes the same
+   Codex dropdown overlay as LuCI's own dropdowns (_dropdown.css) — 90%
+   elevated fill behind a blur, hairline ring + shadow-xl, 16px corners,
+   36px 12px-cornered rows with a trailing check on the current option.
+   Elsewhere the OS popup stays. List boxes (multiple / size > 1) keep
+   their native rendering. */
+@supports (appearance: base-select) {
+  select:not([multiple], [size]:not([size="1"])) {
+    &,
+    &::picker(select) {
+      appearance: base-select;
+    }
+
+    /* base-select lays the trigger out as an inline-flex box; keep the
+       label on the pill's centre line. */
+    @apply items-center;
+
+    /* The trigger keeps its own background-image chevron. */
+    &::picker-icon {
+      @apply hidden;
+    }
+
+    &:open {
+      @apply bg-sidebar-accent;
+    }
+
+    &::picker(select) {
+      @apply bg-elevated-a90 shadow-menu text-foreground mt-1 max-h-[min(60vh,24rem)] min-w-[anchor-size(width)] overflow-y-auto rounded-2xl border-0 p-1.5 backdrop-blur-sm;
+    }
+
+    option {
+      @apply text-foreground flex min-h-9 cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2.5 py-1.5 text-sm leading-5 outline-none [transition:background-color_.1s];
+
+      &:hover,
+      &:focus-visible,
+      &:focus {
+        @apply bg-sidebar-accent;
+      }
+
+      &:disabled {
+        @apply cursor-not-allowed opacity-50;
+      }
+
+      &::checkmark {
+        @apply hidden;
+      }
+
+      &:checked {
+        @apply after:bg-foreground after:ml-auto after:size-4 after:shrink-0 after:content-[''] after:[mask:var(--icon-check)_center/contain_no-repeat];
+      }
+    }
+
+    optgroup {
+      @apply text-text-tertiary px-2.5 pt-1.5 pb-1 text-xs leading-4 font-medium;
+
+      option {
+        @apply -mx-2.5;
+      }
+    }
+  }
+}

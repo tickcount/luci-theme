@@ -13,6 +13,9 @@ export const DEFAULTS = {
     shell: "#f9f9f9",
     bg: "#fcfcfc",
     surface: "#fcfcfc",
+    // Settings card fill (Codex's --color-background-panel): the surface
+    // lifted toward white in light, toward ink in dark.
+    panel_fill: "#ffffff",
     elevated: "#ffffff",
     elevated_secondary: "#ffffff",
     dialog_bg: "#fcfcfc",
@@ -72,6 +75,7 @@ export const DEFAULTS = {
     shell: "#000000",
     bg: "#000000",
     surface: "#000000",
+    panel_fill: "#0a0a0a",
     elevated: "#131313",
     elevated_secondary: "#1b1b1b",
     dialog_bg: "#111111",

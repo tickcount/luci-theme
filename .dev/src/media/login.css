@@ -117,10 +117,6 @@ body {
   @apply text-foreground m-0 text-2xl leading-[1.2] font-medium;
 }
 
-.login-subtitle {
-  @apply text-muted-foreground text-sm leading-5;
-}
-
 /* ── Error: the danger callout ── */
 
 .login-error {

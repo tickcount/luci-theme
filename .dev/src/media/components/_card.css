@@ -1,6 +1,8 @@
 /* ── Sections ────────────────────────────────────────────────────────
    ChatGPT groups settings as a section title (16/24 medium) sitting above a
-   bordered card: 16px corners, 1px hairline, the page canvas as fill. LuCI's
+   bordered card: 16px corners, 1px hairline, a panel fill one step off the
+   canvas (Codex's settings groups: #0a0a0a on black, white on #fcfcfc), so
+   the hairline and the inset row dividers read as the same line. LuCI's
    .cbi-section is that group — its h3 the title, its .cbi-section-node (or
    a bare run of .cbi-value rows) the card. The section itself stays an
    unframed wrapper so tables, ifaceboxes and app markup inside it keep
@@ -64,25 +66,79 @@
     @apply mb-2 flex justify-end;
   }
 
-  /* Overview › Network / Wireless status cards fill a phone's row like
-     every other card (sized by content they floated, narrower than the
-     page, in its middle); on a wide column they stop at 28rem rather than
-     stretch one short card across 920px. They share a row only once the
-     content column has 42rem — beside the expanded sidebar a 768px window
-     squeezed two radio cards until their SSID badges overflowed. */
+  /* Overview › Network / Wireless status cards sit on the content's left
+     edge like every other card, never floated into the middle of the
+     page: a lone card spans the column, two or more share a two-column
+     grid once the column has 42rem — beside the expanded sidebar a 768px
+     window squeezed two radio cards until their SSID badges overflowed. */
   .network-status-table {
-    @apply mb-3 flex flex-wrap justify-around gap-4 @2xl:flex-nowrap;
+    @apply mb-3 grid gap-4 @2xl:grid-cols-2;
 
     > .ifacebox {
-      @apply max-w-md flex-[1_1_16rem];
+      @apply w-full min-w-0;
+
+      &:only-child {
+        @apply col-span-full;
+      }
     }
   }
 
-  /* Port status cards share their row's height: centred, a linkless
-     port's shorter card (lan2/lan3: "no link", 0 B) sat a few px lower
-     than its neighbours with ragged tops and bottoms. */
+  /* Port status: LuCI's auto-fit grid of 100px-capped boxes centred in
+     their tracks left wide gaps between narrow cards. The tiles fill the
+     tracks instead (12px apart, LuCI's inline margin and cap undone) and
+     read left-aligned. LuCI stacks name / icon + speed / network dots /
+     counters; the tile is a two-column grid that lifts the dots row into
+     the title line as its leading status dot ("● lan1", like the Network
+     cards' heads), then the port icon beside the link speed, then the
+     counters. Equal height across the row, so a linkless port no longer
+     sits ragged against its neighbours. */
   div[style*="display:grid"]:has(> .ifacebox) {
-    @apply items-stretch justify-items-center;
+    @apply items-stretch justify-items-stretch gap-3;
+
+    > .ifacebox {
+      @apply m-0! grid! max-w-none! min-w-0! grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr_auto] text-left;
+
+      > .ifacebox-head {
+        @apply col-start-2 row-start-1 justify-start rounded-tl-none pr-3 pl-2;
+
+        /* The dots row: first column of the title line. */
+        &:has(> .zonebadge[style*="height"]) {
+          @apply col-start-1 rounded-tl-2xl py-2.5 pr-0 pl-3;
+        }
+      }
+
+      /* No dots row (older luci-mod-status): the name takes the line. */
+      &:not(:has(> .ifacebox-head > .zonebadge[style*="height"]))
+        > .ifacebox-head {
+        @apply col-span-2 col-start-1 px-3;
+      }
+
+      > .ifacebox-body {
+        @apply col-span-2 items-start px-3 text-left;
+
+        /* Icon + speed on one line ("[port] 1 GbE"); wraps on a phone's
+           70px tile. */
+        &:has(> img) {
+          @apply row-start-2 flex-row flex-wrap items-center justify-start gap-x-2 gap-y-1;
+
+          > img {
+            @apply mx-0;
+          }
+          > br {
+            @apply hidden;
+          }
+        }
+
+        /* Counters, under the speed's hairline-less body. */
+        &:not(:has(> img)) {
+          @apply border-border row-start-3 border-t;
+        }
+
+        .cbi-tooltip-container {
+          @apply justify-start;
+        }
+      }
+    }
   }
 }
 
@@ -317,8 +373,27 @@
   Network interfaces overview — the rich equal-height card layout is scoped here
   (not on the base) so third-party pages keep the plain, tolerant defaults above.
 */
+.network-status-table .ifacebox-head {
+  @apply justify-start px-4;
+}
+
 .network-status-table .ifacebox-body {
-  @apply flex h-full flex-1 flex-col items-center justify-around gap-2;
+  @apply flex h-full flex-1 flex-col items-stretch justify-start gap-3 px-4 py-3 text-left;
+
+  /* "Protocol: DHCP client" lines as a two-column key/value list, labels
+     in ink on a shared 7.5rem column and values in secondary ink beside
+     them — the System card's rows above, not a centred block of text. */
+  > span {
+    @apply flex flex-col gap-1.5 space-y-0;
+
+    > br {
+      @apply hidden;
+    }
+
+    > .nowrap {
+      @apply grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 [overflow-wrap:anywhere] whitespace-normal;
+    }
+  }
 
   > div {
     @apply flex flex-wrap gap-2;

@@ -166,6 +166,32 @@
   @apply px-0 before:inset-x-0;
 }
 
+/* …and their hairlines must outrank the generic divider rule above
+   ((0,4,0)), or they came out 16px in from the text they sit under. */
+.cbi-value .cbi-section .cbi-value:not(.hidden) ~ .cbi-value:not(.hidden) {
+  @apply before:inset-x-0;
+}
+
+/* Such a group is title (16/24) → description 4px under it → its rows,
+   with even air around it: 16px from the hairline above to the title and
+   from the last row's text to the hairline below (the inner row's own
+   12px + 4px). It was 12px above but 24px below, and the description sat
+   24px off its rows yet 12px off its title — every group looked spaced
+   differently. #maincontent outranks the page-wide description margin. */
+.cbi-value:has(> .cbi-section) {
+  @apply pt-4 pb-1;
+}
+
+#maincontent .cbi-value > .cbi-section {
+  > h3 {
+    @apply mb-1;
+  }
+
+  > .cbi-section-descr {
+    @apply mb-0;
+  }
+}
+
 .cbi-value-field {
   &:has(> .cbi-dropdown[disabled]) {
     @apply cursor-not-allowed;
