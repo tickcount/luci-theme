@@ -56,7 +56,7 @@
 	const SEL = { light: ':root:not([data-darkmode="true"])', dark: ':root[data-darkmode="true"]' };
 	const FONT_RE = /^[A-Za-z0-9 ,"'_.\-]{1,200}$/;
 	const TOKEN_RE = /^([a-z0-9-]{1,40})=(#[0-9a-f]{6}([0-9a-f]{2})?)$/;
-	const SANS_TAIL = '"Geist Variable", -apple-system, ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif';
+	const SANS_TAIL = '"Geist Variable", -apple-system, ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, "Apple Color Emoji", "Noto Color Emoji", "Outline Flags", sans-serif';
 	const MONO_TAIL = '"Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 	const SYSTEM_SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 	const SYSTEM_MONO = 'ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
@@ -67,7 +67,7 @@
 	const font_stack = (v, kind) => {
 		v = trim(v ?? '');
 		if (v == '' || !match(v, FONT_RE)) return null;
-		if (v == 'system') return kind == 'mono' ? SYSTEM_MONO : SYSTEM_SANS + ', "Geist Variable"';
+		if (v == 'system') return kind == 'mono' ? SYSTEM_MONO : SYSTEM_SANS + ', "Geist Variable", "Apple Color Emoji", "Noto Color Emoji", "Outline Flags"';
 		return v + ', ' + (kind == 'mono' ? MONO_TAIL : SANS_TAIL);
 	};
 
@@ -313,6 +313,12 @@
 							<img src="{{ media }}/icons/menu.svg" width="18" height="18" alt="">
 						</button>
 						<nav class="topbar-breadcrumb" id="topbar-breadcrumb" aria-label="{{ _('Navigation') }}"></nav>
+						{#- The navbar's brand pill on phones (the desktop one lives in
+						    the sidebar, a drawer there); hidden everywhere else. -#}
+						<a class="topbar-brand" href="/">
+							<img src="{{ logo_url }}" width="20" height="20" alt="">
+							<span>{{ entityencode(striptags((boardinfo && boardinfo.hostname) ? boardinfo.hostname : 'Outline')) }}</span>
+						</a>
 					</div>
 					<div class="card-header-right">
 						{#- The command palette (⌘K) trigger lives in the sidebar under the

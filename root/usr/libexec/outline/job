@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck shell=dash
 # luci-theme-outline: detached package worker for System › Outline Theme › Package.
 #
 #   job check     resolve the latest release
@@ -56,7 +57,7 @@ fail() { # error-code
 }
 
 finish() {
-	status done done
+	status "done" "done"
 	rm -f "$RUN/job.pid"
 }
 
@@ -70,7 +71,8 @@ fetch() { # url file
 }
 
 repo() {
-	local r="$(uci -q get outline.updates.repo)"
+	local r
+	r="$(uci -q get outline.updates.repo)"
 	case "$r" in
 		*/*) case "$r" in *[!A-Za-z0-9._/-]*|*..*) ;; *) echo "$r"; return ;; esac ;;
 	esac
@@ -86,7 +88,7 @@ repo() {
 resolve() {
 	local urls tag="" m="$RUN/resolve"
 	REL_REPO="$(repo)"
-	REL_TAG= REL_VERSION= REL_URL= REL_SHA256=
+	REL_TAG='' REL_VERSION='' REL_URL='' REL_SHA256=''
 	rm -f "$m".*
 
 	log "resolving $PKG from github.com/$REL_REPO"

@@ -1,6 +1,6 @@
 # Build & dev server
 
-**Dual-layer build**: source in `.dev/` → OpenWrt-compatible output committed to `htdocs/luci-static/`.
+**Dual-layer build**: source in `.dev/` → OpenWrt-compatible output in `htdocs/luci-static/`.
 
 | source                               | output                                                                                    |
 | ------------------------------------ | ----------------------------------------------------------------------------------------- |
@@ -11,7 +11,7 @@
 | `.dev/public/outline/`               | `htdocs/luci-static/outline/` — icons/images copied as-is                                 |
 | `ucode/template/themes/outline/*.ut` | not processed by Vite; pushed to a device via the SSH dev plugin                          |
 
-`htdocs/` is generated output checked into git. Rebuild it with `pnpm build`, or trigger the manual `frontend-assets-build.yml` workflow, which builds and commits `htdocs/**`.
+`htdocs/` is generated and **not in git** (`.gitignore`): `pnpm build` writes it locally, CI builds it for the checks and for every package. Nothing commits build output.
 
 ## Terser options that are load-bearing
 
@@ -44,7 +44,18 @@ Pages that embed a service by port on `location.hostname` (Services › Terminal
 
 No linter CLI; the only tests are `.dev/tests/*.test.js` (plain `node:test`, no deps), run with `pnpm test`. Prettier (with `prettier-plugin-tailwindcss`) runs on format-on-save and sorts `@apply`/class lists — don't hand-reorder them.
 
+## CI
+
+- `.github/workflows/ci.yml` (pushes to `master`, pull requests): Prettier check, `pnpm build` (tokens, contrast, Vite, built-CSS colours), `pnpm test` on that build; ShellCheck (`-S warning`) on `install.sh`, the `job` worker, uci-defaults and `.dev/scripts/*.sh`; those keep their executable bit; the versions agree.
+- `.github/workflows/build.yml` (tags `v*`, or by hand for workflow artifacts only): checks the version, builds `htdocs/` once, packs it into the `.ipk` with `itdoginfo/openwrt-sdk-ipk:24.10.6` and the `.apk` with `itdoginfo/openwrt-sdk-apk:25.12.3`, and on a tag publishes the release with both packages, `sha256sums.txt` and `manifest.json`.
+
+Local package build, the same way: `.dev/scripts/build-packages.sh [ipk|apk|all]` (`pnpm build:packages` from `.dev/`) — needs Docker; builds `htdocs/` first unless `SKIP_WEB=1`, writes `dist/`. `.dev/build/Dockerfile` copies only `Makefile`, `htdocs/`, `root/`, `ucode/` (`.dockerignore`) into the SDK's `package/feeds/luci/luci-theme-outline` and compiles that one package. Package files keep the SDK's names (`luci-theme-outline_<ver>-r<rel>_all.ipk`, `luci-theme-outline-<ver>-r<rel>.apk`): `install.sh` and the Package page match them and read the version from them.
+
 ## Releases
 
-- `Makefile` (`PKG_VERSION` / `PKG_RELEASE`) is the OpenWrt package manifest, built via `feeds/luci/luci.mk`.
-- `.github/workflows/build-theme.yml` builds `.ipk`/`.apk` via `eamonxg/build-luci-package` on version tags, pushes to `main`/`feat/**`, or when the commit message contains `[build]`.
+- `Makefile` (`PKG_VERSION` / `PKG_RELEASE`) is the OpenWrt package manifest, built via `feeds/luci/luci.mk`. Dependencies are runtime-only (`LUCI_EXTRA_DEPENDS`, `(>=0)` each): the SDK has nothing to build for them.
+- A release is one commit on `master` titled `Outline X.Y.Z`; its body is `- ` points (wrapped lines indented), which become the GitHub release notes (`.dev/scripts/release-notes.sh`: the points of every commit since the previous tag, other commits by their title). There is no changelog folder. Work from a branch is squashed into that one commit.
+- Bump `PKG_VERSION` in `Makefile` and `"version"` in `.dev/package.json` (CI checks they agree; the tag must be `v` + that version).
+- No `Co-Authored-By` or other agent attribution in commits.
+- Push `master`, then an annotated tag `vX.Y.Z` ("Outline X.Y.Z"); "Build packages" publishes the release.
+- Re-cutting a release (fixes before anyone installs) rewrites `master`: force-push, `gh release delete vX.Y.Z --cleanup-tag`, cancel a running build of the old tag, tag again. Only with the user's go-ahead.

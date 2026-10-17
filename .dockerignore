@@ -1,0 +1,6 @@
+# The package build (.dev/build/Dockerfile) needs only what luci.mk packs.
+*
+!Makefile
+!htdocs
+!root
+!ucode

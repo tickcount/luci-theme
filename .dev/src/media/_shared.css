@@ -15,17 +15,76 @@ html[data-darkmode="true"] {
   @apply scheme-dark;
 }
 
+/* An app UI, not a document. Text keeps the arrow (cursor inherits from
+   here; links and the theme's controls set their own) and only fields that
+   take typing show the I-beam. Taps leave no grey flash and fire at once
+   (touch-action: no double-tap zoom wait, Windows touch laptops included).
+   Interface images don't drag off as files. */
+html {
+  @apply cursor-default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="range"],
+    [type="color"],
+    [type="file"],
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [type="image"]
+  ):enabled,
+textarea:enabled,
+[contenteditable]:not([contenteditable="false"]) {
+  @apply cursor-text;
+}
+
+a,
+button,
+[role="button"],
+input,
+select,
+textarea,
+label,
+summary,
+.cbi-dropdown {
+  @apply touch-manipulation;
+}
+
+/* Controls are pressed, not read: a double click on a button, tab, pill or
+   label no longer paints its text blue. Content — values, tables, logs,
+   fields — stays selectable. */
+button,
+[role="button"],
+.btn,
+.cbi-button,
+.cbi-dropdown,
+.cbi-tabmenu,
+.tabs,
+label,
+nav,
+summary {
+  @apply select-none;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
 /* Lucide icons loaded via <img>: <img>-embedded SVGs render with black strokes
    and ignore the parent's `color`, so flatten them to a single tone and invert
-   for dark mode (per-context opacity stays in each stylesheet). */
-.card-header img,
+   for dark mode (per-context opacity stays in each stylesheet). In the top
+   bar only the buttons' icons: the brand pill's logo keeps its colours. */
+.card-header button img,
 .login-input-icon img,
 .login-pw-toggle img,
 img.outline-icon {
   filter: brightness(0) saturate(100%);
 }
 
-html[data-darkmode="true"] .card-header img,
+html[data-darkmode="true"] .card-header button img,
 html[data-darkmode="true"] .login-input-icon img,
 html[data-darkmode="true"] .login-pw-toggle img,
 html[data-darkmode="true"] img.outline-icon {
@@ -35,7 +94,7 @@ html[data-darkmode="true"] img.outline-icon {
 /* Per-context opacity tuning for the flattened <img> icons above. The card
    header's icons are theme chrome on every admin page, so they stay here;
    the sidebar's (rail, title row) are tuned in _layout.css. */
-.card-header img,
+.card-header button img,
 img.outline-icon {
   opacity: 0.65;
 }

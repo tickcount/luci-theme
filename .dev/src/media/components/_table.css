@@ -160,14 +160,28 @@ table.table,
     }
   }
 
+  /* Lease tables (Status › Overview): DUIDs (28-36 hex digits) and IPv6
+     addresses are single unbreakable tokens, and break-words leaves the
+     columns' min-content at their full length, so the table outgrew the
+     column and the page scrolled sideways. Only those columns may break
+     anywhere -- applied to every cell it split MACs and IAIDs as the auto
+     layout squeezed them (see .cbi-value-field below). */
+  &.leases .td:nth-child(4),
+  &.leases6 .td:nth-child(3),
+  &.leases6 .td:nth-child(4) {
+    @apply @3xl:wrap-anywhere;
+  }
+
   /* Stacked, cells pair up at 50% but never break a word to stay there: a
      long hostname takes a line of its own. w-full is the flex item's
      specified size, which caps its automatic minimum (min-content) at the
      card's width — so a path longer than the card wraps inside it instead
      of pushing the page sideways (ACME's fullchain path at 320px). */
+  /* Tabular figures: live counters (traffic, uptime, percentages) keep
+     their width as they tick instead of jittering the column. */
   td,
   .td {
-    @apply border-border table-cell border-b px-2 py-2.5 align-middle break-words whitespace-normal [transition:background-color_.15s] @max-3xl:w-full @max-3xl:flex-[1_1_50%] @max-3xl:border-0 @max-3xl:px-1 @max-3xl:py-1 @3xl:first:pl-4 @3xl:last:pr-4;
+    @apply border-border table-cell border-b px-2 py-2.5 align-middle break-words whitespace-normal tabular-nums [transition:background-color_.15s] @max-3xl:w-full @max-3xl:flex-[1_1_50%] @max-3xl:border-0 @max-3xl:px-1 @max-3xl:py-1 @3xl:first:pl-4 @3xl:last:pr-4;
     @apply before:@max-3xl:text-text-tertiary before:hidden before:content-[attr(data-title)] before:@max-3xl:mb-0.5 before:@max-3xl:block before:@max-3xl:text-xs before:@max-3xl:font-normal;
 
     > input[type="text"],

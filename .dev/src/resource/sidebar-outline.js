@@ -168,6 +168,10 @@ return baseclass.extend({
     this._mobileQuery = window.matchMedia(`(width < ${bp})`);
     this._mobileQuery.addEventListener("change", (e) => {
       if (!e.matches) this._hideCollapsedPopover();
+      // Either way the drawer starts over: closed, unanimated (the slide
+      // only plays once it is opened again), the page scrollable.
+      this.closeDrawer();
+      sidebar.removeAttribute("data-drawer-open");
     });
 
     // header.ut's pre-paint state: never collapsed as a navbar.

@@ -64,7 +64,15 @@ test("production assets stay within raw-transfer budgets", () => {
   // adaptation (174 KB at the time).
   // 205K: the navbar layout (Appearance › Navigation) -- desktop-only pill
   // rules and the progressive blur behind them, ~6 KB.
-  assert.ok(main <= 205_000, `main.css ${main} B exceeds 205 KB`);
+  // 212K: Podkop-family pages (Podkop, Tachyon, any fork) as theme
+  // surfaces — dashboard tiles, list pickers, the Monitoring controls and
+  // table — plus the Bootstrap palette aliases, ~9 KB.
+  // 213K: app-feel rules (arrow cursor on text, no selection on controls,
+  // tap and drag behaviour, inherited thin scrollbars, tabular cells) and
+  // the country-flags face, ~1 KB.
+  // 215K: the navbar's floating bar on phones (brand pill, indicators,
+  // theme, burger; the scroll blur at every width), ~1.5 KB.
+  assert.ok(main <= 215_000, `main.css ${main} B exceeds 215 KB`);
   assert.ok(login <= 11_000, `login.css ${login} B exceeds 11 KB`);
   // 17.5K: palette tabs (third-level nodes, redirect-parent folding, legacy
   // recents mapping, parent-aware scoring, per-segment path words) added
@@ -81,15 +89,23 @@ test("production assets stay within raw-transfer budgets", () => {
   // 8K: the navbar layout (Appearance › Navigation) reuses the rail's
   // page-list popover under the section pills, on hover and on click.
   // 8.5K: and measures the pill row so its side pills give way to it.
-  assert.ok(sidebar <= 8_500, `sidebar-outline.js ${sidebar} B exceeds 8.5 KB`);
+  // 8.6K: the drawer resets (closed, unanimated) whenever the window
+  // crosses the phone breakpoint, so narrowing it no longer slides the
+  // sidebar across the page.
+  assert.ok(sidebar <= 8_600, `sidebar-outline.js ${sidebar} B exceeds 8.6 KB`);
   assert.ok(
     // 232.5K (was 217.5K under Inter): Geist saves 19 KB, the full ChatGPT
     // restyle (CSS + rail/palette JS) spends ~24 KB.
     // 245K: main.css's sweep growth above (~11 KB raw, ~2 KB gzip).
     // 270K: follows main.css's 200K ceiling (+25 KB).
     // 275K: follows main.css's 205K ceiling (navbar layout).
-    main + menu + router + sidebar + font <= 275_000,
-    "admin assets exceed 275 KB",
+    // 284K: follows main.css's 212K ceiling (Podkop-family pages).
+    // 285K: follows main.css's 213K ceiling. The flags font is not counted:
+    // it loads only on a page with a flag, on a system without flags.
+    // 288K: follows main.css's 215K ceiling (phone navbar) and the
+    // drawer's breakpoint reset.
+    main + menu + router + sidebar + font <= 288_000,
+    "admin assets exceed 288 KB",
   );
   assert.ok(login + font + logo <= 60_000, "login assets exceed 60 KB");
 });

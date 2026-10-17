@@ -63,5 +63,6 @@ export const ALPHAS = {
   success: [15],
   warning: [15],
   info: [15, 40],
-  elevated: [90],
+  // 60: the navbar's glass pills; 90: menus and popovers.
+  elevated: [60, 90],
 };

@@ -5,4 +5,5 @@
 .superpowers/
 docs/superpowers/
 htdocs/
+dist/
 tmp/

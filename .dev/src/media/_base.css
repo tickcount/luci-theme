@@ -2,11 +2,17 @@
    every descendant makes selector matching scale with the whole LuCI page.
 
    This list covers the theme's own scroll containers plus LuCI core markup —
-   a third-party app's own scroll container is not styled here. `scrollbar-color`
-   and `scrollbar-width` inherit from `html`, so such a container still picks up
-   the theme's colours wherever those properties are supported; only the 8px
+   a third-party app's own scroll container is not styled here. It still
+   picks up the theme's thin, tinted bar: `scrollbar-color` inherits from
+   `html`, and `scrollbar-width` (which does not inherit) is passed down by
+   the zero-specificity rule below, so an app can still set its own. That
+   matters on Windows, whose classic bars are 15–17px; only the 8px
    `::-webkit-scrollbar` shape is missed. An app that needs the full treatment
    adds its container to `patches/<page>.css` — see the file-manager patch. */
+:where(*) {
+  scrollbar-width: inherit;
+}
+
 :where(
   html,
   .sidebar-nav,

@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck shell=dash
 # Install, update or remove luci-theme-outline on an OpenWrt router.
 #
 #   wget -qO- https://raw.githubusercontent.com/tickcount/luci-theme-outline/master/install.sh | sh
@@ -132,7 +133,7 @@ fi
 # API, then the public Atom feed plus the release's asset list. The theme's
 # Package page uses the same chain (/usr/libexec/outline/job).
 
-TAG= URLS= SHA_FILE=
+TAG='' URLS='' SHA_FILE=''
 if [ -n "$VERSION" ]; then
 	TAG="$VERSION"
 	case "$TAG" in v*) ;; *) TAG="v$TAG" ;; esac

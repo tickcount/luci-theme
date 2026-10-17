@@ -1,6 +1,6 @@
 <h4 align="right"><a href="README.md">English</a> | <strong>简体中文</strong></h4>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/tickcount/luci-theme/master/htdocs/luci-static/outline/images/logo.png" width="96" alt="Outline LuCI Theme"/>
+    <img src="https://raw.githubusercontent.com/tickcount/luci-theme-outline/master/.dev/public/outline/images/logo.png" width="96" alt="Outline LuCI Theme"/>
 </p>
 <p align="center"><strong>Outline — 一款 ChatGPT 风格的 OpenWrt LuCI 主题。</strong></p>
 <div align="center">
@@ -105,7 +105,9 @@ cd openwrt-sdk-*/
 
 ```sh
 # 加入本软件包并安装 feeds（提供 luci-base）
-git clone https://github.com/tickcount/luci-theme.git package/luci-theme-outline
+git clone https://github.com/tickcount/luci-theme-outline.git package/luci-theme-outline
+# htdocs/ 不在 git 中：先用 pnpm 构建主题的 CSS 和 JS
+(cd package/luci-theme-outline/.dev && pnpm install --frozen-lockfile && pnpm build)
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 

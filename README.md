@@ -1,6 +1,6 @@
 <h4 align="right"><strong>English</strong> | <a href="README_zh.md">简体中文</a></h4>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/tickcount/luci-theme/master/htdocs/luci-static/outline/images/logo.png" width="96" alt="Outline LuCI Theme"/>
+    <img src="https://raw.githubusercontent.com/tickcount/luci-theme-outline/master/.dev/public/outline/images/logo.png" width="96" alt="Outline LuCI Theme"/>
 </p>
 <p align="center"><strong>Outline — a ChatGPT-style LuCI theme for OpenWrt.</strong></p>
 <div align="center">
@@ -90,44 +90,31 @@ Changes preview on the settings page only and are stored with LuCI's own **Save*
 
 ## Build from source
 
-Build the package yourself with the OpenWrt build system. Host prerequisites: [Build system setup](https://openwrt.org/docs/guide-developer/toolchain/install-buildsystem). The build writes the package to `bin/packages/<arch>/base/` (e.g. `bin/packages/x86_64/base/luci-theme-outline_*_all.ipk`); copy it to your router and install it as above.
+`htdocs/` is not in git: the theme's CSS and JS are built from `.dev/` with [pnpm](https://pnpm.io) (Node 22+) first, then the OpenWrt SDK packs them.
 
-### Via the full source tree or SDK
-
-Get set up — clone the full source tree:
+### With Docker (as the release does)
 
 ```sh
-# Full source tree — the openwrt-24.10 branch builds an .ipk, the main branch builds an .apk
-git clone https://github.com/openwrt/openwrt.git
-cd openwrt
-git checkout openwrt-24.10
+git clone https://github.com/tickcount/luci-theme-outline.git
+cd luci-theme-outline
+.dev/scripts/build-packages.sh        # or: ipk | apk
 ```
 
-Or the [prebuilt SDK](https://openwrt.org/docs/guide-developer/toolchain/using_the_sdk) (faster: skips building the toolchain). Grab the archive for your target from [downloads.openwrt.org](https://downloads.openwrt.org), which splits SDKs into Release and Snapshot builds — Release 24.10.x and earlier build `.ipk`; Release 25.12+ and Snapshot build `.apk` (filename, arch and compression vary by target):
+It builds `htdocs/`, then the `.ipk` (OpenWrt 24.10 SDK) and the `.apk` (25.12 SDK) in Docker, and writes them with `sha256sums.txt` to `dist/`.
+
+### In your own source tree or SDK
+
+From an OpenWrt source tree or [SDK](https://openwrt.org/docs/guide-developer/toolchain/using_the_sdk) with the feeds installed (24.10 and earlier build `.ipk`, 25.12+ `.apk`):
 
 ```sh
-wget <sdk-archive-url-from-downloads.openwrt.org>
-tar -xf openwrt-sdk-*.tar.*
-cd openwrt-sdk-*/
+git clone https://github.com/tickcount/luci-theme-outline.git package/luci-theme-outline
+(cd package/luci-theme-outline/.dev && pnpm install --frozen-lockfile && pnpm build)
+./scripts/feeds update -a && ./scripts/feeds install -a
+make menuconfig    # LuCI → Themes → luci-theme-outline
+make package/luci-theme-outline/compile V=s
 ```
 
-Then, from that directory:
-
-```sh
-# Add this package and install feeds (provides luci-base)
-git clone https://github.com/tickcount/luci-theme.git package/luci-theme-outline
-./scripts/feeds update -a
-./scripts/feeds install -a
-
-# Select the theme in menuconfig: LuCI → Themes → luci-theme-outline
-make menuconfig
-
-# Skip these two lines with the SDK — it already ships a built toolchain
-make tools/install -j$(nproc)
-make toolchain/install -j$(nproc)
-
-make package/luci-theme-outline/compile -j$(nproc) V=s
-```
+The package lands in `bin/packages/<arch>/base/`; copy it to the router and install it with opkg or apk.
 
 ## License & Acknowledgments
 
@@ -136,6 +123,7 @@ make package/luci-theme-outline/compile -j$(nproc) V=s
 - [luci-theme-shadcn](https://github.com/eamonxg/luci-theme-shadcn) — the theme Outline is forked from
 - [shadcn/ui](https://github.com/shadcn-ui/ui) — the original design language
 - [Lucide](https://github.com/lucide-icons/lucide) — icons
+- [Twemoji](https://github.com/twitter/twemoji) — country flags on systems without them (CC-BY 4.0, via [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill))
 - [Linear](https://linear.app) — color system inspiration
 - [Vite](https://vite.dev/) and [Tailwind CSS](https://tailwindcss.com/)
 - [luci-theme-bootstrap](https://github.com/openwrt/luci/tree/master/themes/luci-theme-bootstrap) — template structure and LuCI integration patterns

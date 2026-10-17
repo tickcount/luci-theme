@@ -212,6 +212,9 @@ importers:
       colorjs.io:
         specifier: ^0.6.1
         version: 0.6.1
+      country-flag-emoji-polyfill:
+        specifier: 0.1.10
+        version: 0.1.10
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -531,6 +534,9 @@ packages:
 
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
+
+  country-flag-emoji-polyfill@0.1.10:
+    resolution: {integrity: sha512-5O50p2mq/d8+4AfHz3monRQaBA4TIQ0XcKqJUhCYR6SMsLqlO4m8f87og6R1D68Z1sNXGkjLkcEccuzC6T9i5g==}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -1107,6 +1113,8 @@ snapshots:
   commander@14.0.3: {}
 
   commander@2.20.3: {}
+
+  country-flag-emoji-polyfill@0.1.10: {}
 
   detect-libc@2.1.2: {}
 

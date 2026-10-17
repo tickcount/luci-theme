@@ -1,0 +1,255 @@
+/* ── Podkop dashboards ─────────────────────────────────────────────
+   Podkop and its forks (Tachyon, …) share one dashboard: BEM blocks under
+   <prefix>_dashboard-page (pdk_, tachyon_, …) drawn as 2px framed boxes with
+   4px corners, bold titles, and flat loading skeletons with a white shimmer.
+   Forks only change the prefix, so blocks are matched by class suffix:
+   [class*="__X"]:not([class*="__X__"]) is the block itself, not its elements.
+   Inside the theme's section card they become soft tiles: a fill one step
+   off the panel, no visible frame (it stays, transparent, for the states
+   that colour it), card corners, medium titles. #maincontent lifts these over
+   the app's own single-class rules, which load after the theme; modifiers
+   repeat the block's attribute to outweigh the block rule's :not(). The colours
+   behind the rest of the app's markup come from _bootstrap-vars.css. */
+#maincontent {
+  [class*="__widgets-section__item"]:not([class*="__item__"]),
+  [class*="__outbound-section"]:not([class*="__outbound-section__"]),
+  [class*="__subscription-meta"]:not([class*="__subscription-meta__"]),
+  [class*="__outbound-grid__item"]:not([class*="__item__"]) {
+    @apply bg-muted rounded-xl border border-transparent px-3.5 py-3;
+  }
+
+  /* Stat tiles: a muted label over key/value rows, values right-aligned in
+     tabular figures so live rates don't jitter. */
+  [class*="__widgets-section__item__title"] {
+    @apply text-muted-foreground mb-1.5 block text-[13px] font-medium;
+  }
+
+  [class*="__widgets-section__item__row"]:not([class*="__row__"]) {
+    @apply flex justify-between gap-3 leading-[22px];
+  }
+
+  [class*="__widgets-section__item__row__key"] {
+    @apply text-muted-foreground;
+  }
+
+  [class*="__widgets-section__item__row__value"] {
+    @apply min-w-0 text-right wrap-anywhere tabular-nums;
+  }
+
+  /* Routing sections and Active Clients; a collapsed one (a clickable title
+     row and nothing else) lights up under the pointer. */
+  [class*="__outbound-section"]:not([class*="__outbound-section__"]):has(
+      > [style*="cursor: pointer"]:only-child
+    ):hover {
+    @apply bg-soft-hover;
+  }
+
+  [class*="__outbound-section"][class*="__outbound-section--error"] {
+    @apply border-destructive;
+  }
+
+  /* An expanded section's outbounds: the selected one is ringed in the
+     ink colour over a deeper fill, the theme's monochrome "chosen" (a fill
+     alone vanishes on a tile that sits on a tile); a pickable one lights up
+     under the pointer. */
+  [class*="__outbound-grid__item--selectable"]:hover {
+    @apply bg-soft-hover;
+  }
+
+  [class*="__outbound-grid__item"][class*="__outbound-grid__item--active"] {
+    @apply border-primary bg-soft-hover;
+  }
+
+  [class*="__outbound-section__title-section__title"],
+  [class*="__sections-header__title"],
+  [class*="__subscription-meta__heading"],
+  [class*="__subscription-meta__title"],
+  [class*="__widgets-section__item__row"] b,
+  [class*="__outbound-grid__item__header"] b {
+    @apply font-medium;
+  }
+
+  /* Loading skeletons: the same tile, with a shimmer in the foreground's
+     faintest tint instead of 40% white. A plain gradient: Tailwind's
+     gradient utilities would ship ~0.5 KB of --tw-gradient plumbing. */
+  .skeleton {
+    @apply bg-muted rounded-xl;
+
+    &::after {
+      background: linear-gradient(
+        90deg,
+        transparent,
+        var(--foreground-a5),
+        transparent
+      );
+    }
+  }
+}
+
+/* The forks' "+ Add …" list pickers (fkp- dynlists, in the section dialog)
+   imitate a Bootstrap field: gradient, 3px corners, a blue glow on hover
+   and focus, all !important. They open a list, so they take the theme's
+   select pill; the row's settings cog drops the same glow. `body` outweighs
+   the app's rules, which load after the theme. Plain box-shadows: the
+   shadow/ring utilities would ship ~0.4 KB of --tw-shadow plumbing. */
+body .fkp-button-add-dynlist > .add-item > .cbi-button-add {
+  @apply border-border! bg-select-bg! text-foreground! hover:bg-sidebar-accent! min-h-9! rounded-full! bg-none! px-3.5! text-sm!;
+  box-shadow: none !important;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--ring) !important;
+  }
+}
+
+body .fkp-connections-dynlist > .item > .fkp-dynlist-settings {
+  &:hover,
+  &:focus {
+    @apply border-border!;
+    box-shadow: none;
+  }
+}
+
+/* Monitoring: the connections table's controls. The app draws them as
+   Bootstrap boxes with blue selection, its rules !important and partly
+   keyed to ids, hence the weight here. Active / Closed is the theme's
+   segmented control (a 5% well, the chosen segment lifted onto the canvas,
+   as the chart range switchers); the icon buttons are round soft buttons,
+   close-all in the destructive soft fill; search is a pill beside the
+   select pills. Headers drop the app's capitals, as every theme table, and
+   the columns are rebalanced so the 12px headings fit unclipped down to
+   the table's 840px minimum. */
+#maincontent .cbi-value:has(> * > [class*="_monitoring-page"]) {
+  @apply mb-0;
+}
+
+#maincontent [class*="_monitoring-page"] {
+  /* The page fills the section card edge to edge: the controls take the
+     card's 16px inset, the table is the card's lower half (no second frame,
+     a hairline under the controls) and closes it without the row margin. */
+  [class*="_monitoring-page__controls"] {
+    @apply items-start px-4;
+  }
+
+  /* Always a grid: the app scrolls it sideways from 840px, so the theme's
+     stacked cards (for narrow containers) only scattered its cells, which
+     carry no data-title captions. */
+  table[class*="_monitoring-page__table"] {
+    @apply mb-0 table rounded-none border-x-0 border-b-0 bg-transparent;
+
+    thead {
+      @apply table-header-group;
+    }
+
+    tbody {
+      @apply table-row-group;
+    }
+
+    tr {
+      @apply table-row border-0 p-0;
+    }
+
+    th,
+    td {
+      @apply border-border table-cell w-auto border-b px-2 py-2.5 first:pl-4 last:pr-4;
+    }
+
+    /* The app's narrow layout right-aligns every value; each follows its
+       column instead (numbers right, names left). No utility spells
+       text-align: inherit (text-[inherit] reads as a colour). */
+    td [class*="_monitoring-page__value"] {
+      text-align: inherit;
+    }
+  }
+
+  /* The app stretches it across its own row on narrow screens. */
+  [class*="_monitoring-page__tabs"] {
+    @apply bg-muted flex-none gap-0.5 rounded-full border-0 p-0.5;
+  }
+
+  .btn[class*="_monitoring-page__tab"] {
+    @apply text-muted-foreground! hover:text-foreground! h-8 rounded-full bg-transparent! px-3 text-sm font-medium;
+  }
+
+  .btn[class*="_monitoring-page__tab--active"] {
+    @apply bg-background! text-foreground! shadow-sm;
+  }
+
+  [class*="_monitoring-page__tab-badge"] {
+    @apply bg-foreground-a10 text-muted-foreground text-xs font-medium;
+  }
+
+  [class*="__tab--active"] [class*="_monitoring-page__tab-badge"] {
+    @apply text-foreground;
+  }
+
+  .btn[class*="_monitoring-page__icon-button"][id][type] {
+    @apply bg-muted! text-muted-foreground! hover:bg-soft-hover! hover:text-foreground! size-9! rounded-full! border-transparent!;
+  }
+
+  .btn[class*="_monitoring-page__icon-button--active"][id][type] {
+    @apply bg-soft-hover! text-foreground!;
+  }
+
+  .btn[class*="_monitoring-page__icon-button"][id$="close-all"][type] {
+    @apply bg-danger-soft! text-destructive! hover:bg-destructive-a20! hover:text-destructive!;
+  }
+
+  [class*="_monitoring-page__device-filter"] {
+    @apply h-9!;
+  }
+
+  [class*="_monitoring-page__search"]:not([class*="__search-"]) {
+    @apply h-9;
+  }
+
+  /* Over the field: its fill is opaque and hid the icon. */
+  [class*="_monitoring-page__search-icon"] {
+    @apply left-3 z-10;
+  }
+
+  [class*="_monitoring-page__search-input"] {
+    @apply h-9! rounded-full! pl-9!;
+  }
+
+  table[class*="_monitoring-page__table"] {
+    th {
+      @apply text-xs text-ellipsis normal-case;
+    }
+
+    th:nth-child(1) {
+      @apply w-[23%];
+    }
+
+    th:nth-child(2) {
+      @apply w-[6.5%];
+    }
+
+    th:nth-child(3) {
+      @apply w-[10%];
+    }
+
+    th:nth-child(5) {
+      @apply w-[12%];
+    }
+
+    th:nth-child(6) {
+      @apply w-[11%];
+    }
+
+    th:nth-child(7) {
+      @apply w-[23.5%];
+    }
+
+    th:nth-child(8) {
+      @apply w-[7%];
+    }
+  }
+
+  [class*="_monitoring-page__source-value"] {
+    @apply justify-start;
+  }
+
+  [class*="_monitoring-page__route"] {
+    @apply bg-muted rounded-md;
+  }
+}

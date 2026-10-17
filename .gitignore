@@ -1,6 +1,11 @@
 # Dependencies
 .dev/node_modules/
 
+# Build output: htdocs/ is built by pnpm build (CI builds it for the
+# packages), dist/ holds the packages from .dev/scripts/build-packages.sh
+/htdocs/
+/dist/
+
 # Environment secrets (host, SSH keys)
 .dev/.env
 

@@ -326,6 +326,7 @@ function derive(variant, theme) {
     "foreground-a30": alpha(I, 0.3),
     "info-a15": alpha(rgb(t["link"]), 0.15),
     "info-a40": alpha(rgb(t["link"]), 0.4),
+    "elevated-a60": alpha(rgb(t["elevated"].slice(0, 7)), 0.6),
     "elevated-a90": alpha(rgb(t["elevated"].slice(0, 7)), 0.9),
   });
 
@@ -337,7 +338,7 @@ function derive(variant, theme) {
 const FONT_STACK_RE = /^[A-Za-z0-9 ,"'_.\-]{1,200}$/;
 
 const SANS_TAIL =
-  '"Geist Variable", -apple-system, ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif';
+  '"Geist Variable", -apple-system, ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, "Apple Color Emoji", "Noto Color Emoji", "Outline Flags", sans-serif';
 const MONO_TAIL =
   '"Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 const SYSTEM_SANS =
@@ -352,7 +353,10 @@ function fontStack(value, kind) {
   value = String(value || "").trim();
   if (value == "" || !FONT_STACK_RE.test(value)) return null;
   if (value == "system")
-    return kind == "mono" ? SYSTEM_MONO : SYSTEM_SANS + ', "Geist Variable"';
+    return kind == "mono"
+      ? SYSTEM_MONO
+      : SYSTEM_SANS +
+          ', "Geist Variable", "Apple Color Emoji", "Noto Color Emoji", "Outline Flags"';
   return value + ", " + (kind == "mono" ? MONO_TAIL : SANS_TAIL);
 }
 

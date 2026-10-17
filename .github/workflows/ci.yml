@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web (format, build, tests)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: .dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: .dev/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: .dev/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        id: format
+        run: |
+          if ! pnpm run --silent format:check; then
+            echo "::error::Code is not formatted. Run 'pnpm format' in .dev/."
+            exit 1
+          fi
+
+      # Tokens, contrast, the Vite build and the built-CSS colour check.
+      - name: Build htdocs
+        id: build
+        run: pnpm build
+
+      # The tests read the build output.
+      - name: Tests
+        id: tests
+        run: pnpm test
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Web"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Formatting | ${{ steps.format.outcome }} |"
+            echo "| Build | ${{ steps.build.outcome }} |"
+            echo "| Tests | ${{ steps.tests.outcome }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  shell:
+    name: ShellCheck
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: ShellCheck
+        run: |
+          shellcheck --version
+          shellcheck -S warning \
+            install.sh \
+            root/usr/libexec/outline/job \
+            root/etc/uci-defaults/30_luci-theme-outline \
+            .dev/scripts/*.sh
+
+  package:
+    name: Package checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Executables keep their mode
+        run: |
+          for f in install.sh root/usr/libexec/outline/job root/etc/uci-defaults/30_luci-theme-outline .dev/scripts/*.sh; do
+            [ -x "$f" ] || { echo "::error file=$f::not executable (git update-index --chmod=+x $f)"; exit 1; }
+          done
+
+      - name: Versions agree
+        run: |
+          v="$(sed -n 's/^PKG_VERSION:=//p' Makefile)"
+          grep -q "\"version\": \"$v\"" .dev/package.json
+          echo "Version $v"

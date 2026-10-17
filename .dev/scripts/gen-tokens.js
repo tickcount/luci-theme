@@ -56,7 +56,8 @@ const darkAOut = used(darkA);
 const STRUCTURE = `
   --font-sans:
     "Geist Variable", Geist, -apple-system, ui-sans-serif, system-ui,
-    "Segoe UI", Helvetica, Arial, sans-serif;
+    "Segoe UI", Helvetica, Arial, "Apple Color Emoji", "Noto Color Emoji",
+    "Outline Flags", sans-serif;
   --font-mono:
     "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", Menlo,
     Consolas, monospace;

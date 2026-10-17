@@ -81,11 +81,13 @@
   --warning-a15: oklch(62.96% 0.1894 41.5 / 0.15);
   --info-a15: oklch(52.71% 0.1593 259.5 / 0.15);
   --info-a40: oklch(52.71% 0.1593 259.5 / 0.4);
+  --elevated-a60: oklch(100% 0 none / 0.6);
   --elevated-a90: oklch(100% 0 none / 0.9);
 
   --font-sans:
     "Geist Variable", Geist, -apple-system, ui-sans-serif, system-ui,
-    "Segoe UI", Helvetica, Arial, sans-serif;
+    "Segoe UI", Helvetica, Arial, "Apple Color Emoji", "Noto Color Emoji",
+    "Outline Flags", sans-serif;
   --font-mono:
     "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", Menlo,
     Consolas, monospace;
@@ -184,6 +186,7 @@
   --warning-a15: oklch(74.33% 0.1658 45.11 / 0.15);
   --info-a15: oklch(70.74% 0.1533 255.7 / 0.15);
   --info-a40: oklch(70.74% 0.1533 255.7 / 0.4);
+  --elevated-a60: oklch(18.67% 0 none / 0.6);
   --elevated-a90: oklch(18.67% 0 none / 0.9);
 }
 
@@ -263,6 +266,7 @@
   --color-warning-a15: var(--warning-a15);
   --color-info-a15: var(--info-a15);
   --color-info-a40: var(--info-a40);
+  --color-elevated-a60: var(--elevated-a60);
   --color-elevated-a90: var(--elevated-a90);
 
   --color-sidebar-fg: var(--sidebar-foreground);

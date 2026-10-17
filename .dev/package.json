@@ -1,11 +1,13 @@
 {
   "name": "luci-theme-outline",
+  "version": "1.2.0",
   "description": "ChatGPT-style LuCI theme for OpenWrt, built with Vite and TailwindCSS",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "test": "node --test tests/*.test.js",
     "setup:router": "luci-theme-setup",
+    "build:packages": "scripts/build-packages.sh",
     "build": "pnpm clean && pnpm gen:tokens && pnpm check:contrast && vite build && pnpm check:colors",
     "check:colors": "node scripts/check-built-css.js",
     "check:contrast": "node scripts/check-token-contrast.js",
@@ -27,6 +29,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^25.9.1",
     "colorjs.io": "^0.6.1",
+    "country-flag-emoji-polyfill": "0.1.10",
     "husky": "^9.1.7",
     "lightningcss": "^1.32.0",
     "lint-staged": "^16.4.0",

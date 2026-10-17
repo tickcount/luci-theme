@@ -1,0 +1,169 @@
+name: Build packages
+
+# A tag vX.Y.Z builds luci-theme-outline as .ipk (OpenWrt 24.10, opkg) and .apk
+# (OpenWrt 25.12, apk) with the OpenWrt SDK and publishes a GitHub release with
+# both packages, sha256sums.txt and manifest.json (what install.sh and the
+# Package page read first). htdocs/ is not in git: the assets job builds it
+# once and both packages pack that same build. The release notes list what
+# changed since the previous tag, from the commits (.dev/scripts/release-notes.sh).
+# Run it by hand to get the packages as workflow artifacts only.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Read-only by default; only the release job may write (publish the release).
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Read and check the version
+        id: version
+        run: |
+          v="$(sed -n 's/^PKG_VERSION:=//p' Makefile)"
+          grep -q "\"version\": \"$v\"" .dev/package.json ||
+            { echo "::error::.dev/package.json version differs from the Makefile ($v)"; exit 1; }
+          if [ "${GITHUB_REF_TYPE}" = tag ] && [ "${GITHUB_REF_NAME}" != "v$v" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the package version v$v"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  assets:
+    name: Build htdocs
+    runs-on: ubuntu-24.04
+    needs: version
+    defaults:
+      run:
+        working-directory: .dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: .dev/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: .dev/pnpm-lock.yaml
+
+      - name: Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm test
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: htdocs
+          path: htdocs/
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    name: Build ${{ matrix.type }}
+    runs-on: ubuntu-24.04
+    needs: [version, assets]
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { type: ipk, sdk: "itdoginfo/openwrt-sdk-ipk:24.10.6" }
+          - { type: apk, sdk: "itdoginfo/openwrt-sdk-apk:25.12.3" }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Download htdocs
+        uses: actions/download-artifact@v4
+        with:
+          name: htdocs
+          path: htdocs
+
+      - name: Build the ${{ matrix.type }} with the OpenWrt SDK
+        env:
+          SKIP_WEB: 1
+          IPK_SDK: ${{ matrix.sdk }}
+          APK_SDK: ${{ matrix.sdk }}
+        run: .dev/scripts/build-packages.sh ${{ matrix.type }}
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.type }}
+          path: dist/luci-theme-outline*${{ needs.version.outputs.version }}*.${{ matrix.type }}
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    needs: [version, build]
+    if: github.ref_type == 'tag'
+    permissions:
+      contents: write
+    steps:
+      # The whole history and the tags: the notes list the commits since the previous tag.
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Release notes
+        run: |
+          sh .dev/scripts/release-notes.sh "${GITHUB_REF_NAME}" "${GITHUB_REPOSITORY}" > notes.md
+          cat notes.md
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: release
+          merge-multiple: true
+
+      # manifest.json: what install.sh and System › Outline Theme › Package
+      # read first -- served from the CDN (no API rate limit) and carrying a
+      # sha256 per package, which both verify before installing.
+      - name: Checksums and manifest
+        working-directory: release
+        run: |
+          sha256sum luci-theme-outline* > sha256sums.txt
+          cat sha256sums.txt
+          for f in luci-theme-outline*; do
+            jq -n --arg name "$f" \
+              --arg url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/$f" \
+              --arg sha256 "$(sha256sum "$f" | cut -d' ' -f1)" \
+              --argjson size "$(stat -c%s "$f")" \
+              '{name: $name, url: $url, sha256: $sha256, size: $size}'
+          done | jq -s --arg tag "${GITHUB_REF_NAME}" '{name: "luci-theme-outline", tag: $tag, files: .}' > manifest.json
+          cat manifest.json
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Outline ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: release/*
+          body_path: notes.md

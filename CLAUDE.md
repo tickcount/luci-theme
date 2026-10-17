@@ -17,13 +17,14 @@ pnpm clean            # Remove build output only
 pnpm gen:tokens       # Regenerate src/media/_tokens.css from tokens/*.js
 pnpm check:contrast   # Check muted text tokens meet WCAG AA contrast
 pnpm test             # node --test tests/*.test.js (build output, palette, settings pages)
+pnpm build:packages   # .ipk + .apk with the OpenWrt SDK in Docker, as the release does → ../dist/
 ```
 
 ## Layout
 
-**Dual-layer build**: source in `.dev/` → OpenWrt-compatible output committed to `htdocs/luci-static/`. `htdocs/` is generated; rebuild it with `pnpm build`, never hand-edit it. Server-side templates (`ucode/template/themes/outline/*.ut`) are not processed by Vite.
+**Dual-layer build**: source in `.dev/` → OpenWrt-compatible output in `htdocs/luci-static/`. `htdocs/` is generated and not in git — `pnpm build` writes it, CI builds it for the packages; never hand-edit or commit it. Server-side templates (`ucode/template/themes/outline/*.ut`) are not processed by Vite.
 
-Details — output map, load-bearing terser options, dev-server env, Vite plugins, release workflow: **[.dev/docs/build.md](.dev/docs/build.md)**.
+Details — output map, load-bearing terser options, dev-server env, Vite plugins, CI and releases: **[.dev/docs/build.md](.dev/docs/build.md)**.
 
 ## Rules that bite if ignored
 
@@ -38,4 +39,5 @@ Details — output map, load-bearing terser options, dev-server env, Vite plugin
 
 - Vite config: `.dev/vite.config.ts`
 - Design tokens: `.dev/src/media/_tokens.css` (generated), `.dev/tokens/*.js` (source)
-- Version: `PKG_VERSION` / `PKG_RELEASE` in `Makefile`
+- Version: `PKG_VERSION` / `PKG_RELEASE` in `Makefile`, `"version"` in `.dev/package.json` (kept equal)
+- Releases: one commit `Outline X.Y.Z` whose `- ` points are the release notes, then tag `vX.Y.Z` → [.dev/docs/build.md#releases](.dev/docs/build.md#releases)

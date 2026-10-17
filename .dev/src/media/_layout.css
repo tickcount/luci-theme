@@ -7,14 +7,22 @@
    only the rail stays. */
 
 #sidebar {
-  /* Mobile drawer: translate only; `transition-all` would also ease
-     background-color and lag the sidebar behind the content on theme flips. */
   /* overflow-visible on desktop: the rail's tooltips sit outside it. */
   @apply bg-sidebar-bg text-sidebar-fg flex h-full w-[290px] shrink-0 flex-row overflow-hidden md:overflow-visible;
-  @apply max-md:fixed max-md:top-0 max-md:left-0 max-md:z-40 max-md:w-[min(290px,calc(100vw-48px))] max-md:-translate-x-full max-md:[transition:translate_.3s_var(--ease-enter)];
+  @apply max-md:fixed max-md:top-0 max-md:left-0 max-md:z-40 max-md:w-[min(290px,calc(100vw-48px))] max-md:-translate-x-full;
   /* Drawer height tracks the dynamic viewport so its bottom edge meets the
      Safari toolbar smoothly instead of jumping when the toolbar shows/hides. */
   @apply max-md:h-dvh;
+
+  /* Mobile drawer: translate only (`transition-all` would also ease
+     background-color and lag the sidebar behind the content on theme
+     flips), and only once the burger has been used -- data-drawer-open is
+     set by opening and cleared whenever the window crosses the breakpoint
+     (sidebar-outline.js). A window narrowed past it would otherwise slide
+     the sidebar out from where the desktop drew it. */
+  &[data-drawer-open] {
+    @apply max-md:[transition:translate_.3s_var(--ease-enter)];
+  }
 
   &[data-drawer-open="true"] {
     @apply max-md:translate-x-0 max-md:shadow-xl;
@@ -345,6 +353,19 @@ html[data-sidebar-anim] #sidebar {
   }
 }
 
+/* The navbar's brand pill on phones (see the Navbar layout below). */
+.topbar-brand {
+  @apply text-foreground hidden h-10 min-w-0 items-center gap-2 rounded-full px-3 text-sm leading-5 font-medium no-underline;
+
+  img {
+    @apply size-5 shrink-0 rounded-[22%] object-contain;
+  }
+
+  span {
+    @apply truncate;
+  }
+}
+
 .topbar-breadcrumb {
   @apply flex min-w-0 items-center gap-1 px-1 text-sm leading-5;
 
@@ -604,13 +625,16 @@ html:not([data-darkmode="true"]) #theme-toggle-btn .theme-icon-dark {
 
 /* ── Navbar layout ──────────────────────────────────────────────────
    Appearance › Navigation › Navbar: html[data-nav="navbar"] from header.ut,
-   desktop only (phones keep the drawer). The same #sidebar markup, laid out
+   on desktop. The same #sidebar markup, laid out
    as floating pills over the page: the rail becomes a brand pill (logo +
    hostname) and a section pill along the top; hovering or clicking a
    section drops its page list under it (sidebar-outline.js, the collapsed
    rail's popover). On the right: the top bar's indicators (incl. LuCI's
    poll pause/resume) and the theme switch, then search (⌘K) and logout. The
-   page scrolls under the pills and they blur what passes beneath. */
+   page scrolls under the pills and they blur what passes beneath.
+   Phones keep the sidebar as a drawer but get the same floating bar,
+   without the section pill: the brand pill on the left; the indicators, the
+   theme switch and the drawer's burger on the right. */
 
 /* Labels the rail only shows as a navbar. */
 .sidebar-rail-label {
@@ -628,14 +652,22 @@ html[data-nav="navbar"] {
     @apply md:pointer-events-none md:fixed md:inset-0 md:z-30 md:block md:h-auto md:w-auto md:overflow-visible md:bg-transparent;
   }
 
-  /* Floating surface shared by every pill. */
+  /* Floating surface shared by every pill: the sidebar's on desktop (a
+     drawer on phones), the top bar's at every width. Glass: the panel fill
+     at 60% over a 24px blur, so the page shows through, softened, edged
+     by the faintest ink hairline (5%, under the cards' 7.5%). */
   .sidebar-rail-home,
   .sidebar-rail-nav,
   .sidebar-footer .sidebar-logout,
-  #sidebar button.cmdk-trigger,
+  #sidebar button.cmdk-trigger {
+    @apply md:bg-elevated-a60 md:border-foreground-a5 md:pointer-events-auto md:border md:shadow-sm md:backdrop-blur-xl;
+  }
+
+  .topbar-brand,
+  .topbar-hamburger,
   .topbar-indicators span[data-indicator],
   #theme-toggle-btn {
-    @apply md:bg-elevated-a90 md:border-border md:pointer-events-auto md:border md:shadow-sm md:backdrop-blur-xl;
+    @apply bg-elevated-a60 border-foreground-a5 pointer-events-auto border shadow-sm backdrop-blur-xl;
   }
 
   .sidebar-rail {
@@ -735,22 +767,41 @@ html[data-nav="navbar"] {
     }
   }
 
+  /* Over the scroll blur (z-20), under the phone drawer's overlay (z-30). */
   .card-header {
-    @apply md:pointer-events-none md:fixed md:top-3 md:right-[calc(var(--nav-edge)+96px)] md:z-30 md:h-10 md:bg-transparent md:p-0;
+    @apply pointer-events-none fixed inset-x-3 top-3 z-[25] h-10 gap-2 bg-transparent p-0 md:right-[calc(var(--nav-edge)+96px)] md:left-auto;
   }
 
+  /* Phones: the left group dissolves so its pieces order with the right
+     one -- brand, then indicators and theme, the burger last. */
   .card-header-left {
-    @apply md:hidden;
+    @apply max-md:contents md:hidden;
+  }
+
+  .topbar-breadcrumb {
+    @apply hidden;
+  }
+
+  .topbar-brand {
+    @apply max-md:flex;
+  }
+
+  .card-header-right {
+    @apply ml-auto;
+  }
+
+  .topbar-hamburger {
+    @apply order-1 size-10 rounded-full;
   }
 
   .card-header-right,
   .topbar-indicators {
-    @apply md:gap-2;
+    @apply gap-2;
   }
 
   .topbar-indicators span[data-indicator],
   #theme-toggle-btn {
-    @apply md:size-10;
+    @apply size-10;
   }
 
   .content-card {
@@ -761,7 +812,7 @@ html[data-nav="navbar"] {
      kept on both edges so the column centres on the page, under the
      section pill, whatever the scrollbar takes. */
   #maincontent {
-    @apply md:[scrollbar-gutter:stable_both-edges] md:pt-24;
+    @apply pt-20 md:[scrollbar-gutter:stable_both-edges] md:pt-24;
   }
 
   /* Once the page has scrolled (html[data-scrolled], sidebar-outline.js) a
@@ -773,26 +824,26 @@ html[data-nav="navbar"] {
   #main-wrapper::before,
   #main-wrapper::after,
   .content-card::before {
-    @apply md:pointer-events-none md:fixed md:inset-x-0 md:top-0 md:z-20 md:h-30 md:opacity-0 md:content-[''] md:[transition:opacity_.5s_cubic-bezier(.4,0,.2,1)];
+    @apply pointer-events-none fixed inset-x-0 top-0 z-20 h-30 opacity-0 content-[''] [transition:opacity_.5s_cubic-bezier(.4,0,.2,1)];
   }
 
   #main-wrapper::before {
-    @apply md:[mask-image:linear-gradient(#000_45%,transparent)] md:backdrop-blur-[2px];
+    @apply [mask-image:linear-gradient(#000_45%,transparent)] backdrop-blur-[2px];
   }
 
   .content-card::before {
-    @apply md:[mask-image:linear-gradient(#000_25%,transparent_75%)] md:backdrop-blur-[6px];
+    @apply [mask-image:linear-gradient(#000_25%,transparent_75%)] backdrop-blur-[6px];
   }
 
   #main-wrapper::after {
-    @apply md:bg-[linear-gradient(var(--background),transparent)] md:[mask-image:linear-gradient(#000_10%,transparent_55%)] md:backdrop-blur-[12px];
+    @apply bg-[linear-gradient(var(--background),transparent)] [mask-image:linear-gradient(#000_10%,transparent_55%)] backdrop-blur-[12px];
   }
 
   &[data-scrolled] {
     #main-wrapper::before,
     #main-wrapper::after,
     .content-card::before {
-      @apply md:opacity-100;
+      @apply opacity-100;
     }
   }
 }

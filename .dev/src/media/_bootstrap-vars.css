@@ -1,0 +1,39 @@
+/* ── Bootstrap palette aliases ─────────────────────────────────────
+   LuCI's Bootstrap theme exposes its palette as --background-color-*,
+   --text-color-*, --border-color-*, --primary/success/error/warn-color-*,
+   and third-party apps style their own markup with them (Podkop and its
+   forks such as Tachyon, Dawnline). Without them those apps fall back to
+   hardcoded light-theme values: lightgray 2px frames and #e0e0e0 skeletons
+   on a black page. Mapped onto Outline's tokens they follow the palette, dark mode and
+   System › Outline Theme overrides. LuCI core uses none of them, and the
+   theme's own sources (outline/ui.js) read Outline's tokens first. */
+:root {
+  --background-color-high: var(--panel-bg);
+  --background-color-medium: var(--muted);
+  --background-color-low: var(--soft-hover);
+
+  --border-color-high: var(--input);
+  --border-color-medium: var(--border);
+  --border-color-low: var(--panel-border);
+
+  --text-color-highest: var(--foreground);
+  --text-color-high: var(--foreground);
+  --text-color-medium: var(--muted-foreground);
+  --text-color-low: var(--text-tertiary);
+
+  --primary-color-high: var(--link);
+  --primary-color-medium: var(--accent);
+  --primary-color-low: var(--accent);
+
+  --success-color-high: var(--success);
+  --success-color-medium: var(--success);
+  --success-color-low: var(--success);
+
+  --error-color-high: var(--destructive);
+  --error-color-medium: var(--destructive);
+  --error-color-low: var(--destructive);
+
+  --warn-color-high: var(--warning);
+  --warn-color-medium: var(--warning);
+  --warn-color-low: var(--warning);
+}
